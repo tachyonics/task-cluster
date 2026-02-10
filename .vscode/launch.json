@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:task-cluster}",
+            "name": "Debug task-cluster",
+            "target": "task-cluster",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug task-cluster"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:task-cluster}",
+            "name": "Release task-cluster",
+            "target": "task-cluster",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release task-cluster"
+        }
+    ]
+}

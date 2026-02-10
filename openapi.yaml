@@ -1,0 +1,178 @@
+openapi: "3.1.0"
+info:
+  title: task-cluster API
+  description: Cloud task management service for submitting, prioritising, and executing tasks.
+  version: "0.1.0"
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /task:
+    post:
+      operationId: createTask
+      summary: Create a new task
+      tags: [Tasks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTaskRequest"
+      responses:
+        "201":
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskResponse"
+        "400":
+          description: Invalid request (e.g. priority out of range)
+
+  /task/{taskId}:
+    get:
+      operationId: getTask
+      summary: Get a task by ID
+      tags: [Tasks]
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Task found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskResponse"
+        "404":
+          description: Task not found
+
+  /task/{taskId}/priority:
+    patch:
+      operationId: updateTaskPriority
+      summary: Update a task's priority
+      tags: [Tasks]
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePriorityRequest"
+      responses:
+        "200":
+          description: Priority updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskResponse"
+        "400":
+          description: Invalid priority value
+        "404":
+          description: Task not found
+
+  /task/{taskId}/cancel:
+    post:
+      operationId: cancelTask
+      summary: Cancel a task
+      tags: [Tasks]
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Task cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskResponse"
+        "404":
+          description: Task not found
+        "409":
+          description: Task cannot be cancelled (already completed, failed, or cancelled)
+
+components:
+  schemas:
+    TaskStatus:
+      type: string
+      enum:
+        - pending
+        - running
+        - completed
+        - failed
+        - cancelled
+
+    CreateTaskRequest:
+      type: object
+      required:
+        - title
+        - priority
+      properties:
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 10
+        dueBy:
+          type: string
+          format: date-time
+
+    UpdatePriorityRequest:
+      type: object
+      required:
+        - priority
+      properties:
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 10
+
+    TaskResponse:
+      type: object
+      required:
+        - taskId
+        - title
+        - priority
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        taskId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        priority:
+          type: integer
+        status:
+          $ref: "#/components/schemas/TaskStatus"
+        dueBy:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
