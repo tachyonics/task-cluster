@@ -20,7 +20,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-openapi-generator.git", from: "1.6.0"),
         .package(url: "https://github.com/apple/swift-openapi-runtime.git", from: "1.7.0"),
         .package(url: "https://github.com/swift-server/swift-openapi-hummingbird.git", from: "2.0.1"),
-        .package(url: "https://github.com/tachyonics/smockable.git", from: "0.5.0"),
+        .package(url: "https://github.com/tachyonics/smockable.git", from: "0.8.0"),
         .package(url: "https://github.com/swift-server-community/dynamo-db-tables.git", branch: "main"),
     ],
     targets: [
@@ -38,9 +38,7 @@ let package = Package(
         // MARK: - Core domain models and repository protocol
         .target(
             name: "TaskClusterModel",
-            dependencies: [
-                .product(name: "Smockable", package: "smockable"),
-            ]
+            dependencies: []
         ),
 
         // MARK: - Hummingbird app layer (APIProtocol implementation, app builder)

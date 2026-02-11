@@ -22,7 +22,7 @@ swift test --filter TaskClusterIntegrationTests     # Integration tests only
 ## Architecture
 
 - **TaskAPI** -- OpenAPI generator config + symlink to the root `openapi.yaml`. Uses `filter: tags: [Tasks]` to generate only task operations. The `OpenAPIGenerator` build plugin produces `APIProtocol`, `Operations.*`, and `Components.Schemas.*` at compile time
-- **TaskClusterModel** -- Domain types (`TaskItem`, `TaskStatus`), `TaskRepository` protocol (with `@Smock` macro for mocking), and `InMemoryTaskRepository` actor
+- **TaskClusterModel** -- Domain types (`TaskItem`, `TaskStatus`), `TaskRepository` protocol, and `InMemoryTaskRepository` actor
 - **TaskClusterApp** -- `APIProtocol` conformance (`TaskController`), `buildApplication()` wiring. Each API domain gets its own spec target and controller; `buildRouter()` calls `registerHandlers(on:)` for each
 - **TaskClusterService** -- `@main` executable entry point using `swift-configuration` (`ConfigReader`)
 - **DynamoDBTasks** -- DynamoDB `TaskRepository` implementation, gated behind the `DynamoDB` SPM trait (SE-0450)
@@ -40,5 +40,5 @@ swift test --filter TaskClusterIntegrationTests     # Integration tests only
 
 - **OpenAPI-driven** -- The spec at `./openapi.yaml` (project root) is the single source of truth. Each API target (e.g. `Sources/TaskAPI/`) symlinks to it and uses `filter` in `openapi-generator-config.yaml` to generate only its subset of operations by tag. The build plugin generates type-safe server stubs (`APIProtocol`) and request/response types
 - **Repository protocol** -- All storage goes through `TaskRepository`. Swap implementations via DI
-- **Smockable mocks** -- `@Smock` generates `MockTaskRepository` for unit tests
+- **Smockable mocks** -- `@Smock` on a shadow protocol in the test target generates `MockTestTaskRepository` for unit tests. Smockable is a test-only dependency
 - **SPM traits** -- `DynamoDB` trait gates the dynamo-db-tables dependency so it's not fetched unless needed
