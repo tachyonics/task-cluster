@@ -21,7 +21,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-openapi-runtime.git", from: "1.7.0"),
         .package(url: "https://github.com/swift-server/swift-openapi-hummingbird.git", from: "2.0.1"),
         .package(url: "https://github.com/tachyonics/smockable.git", from: "0.8.0"),
-        .package(url: "https://github.com/swift-server-community/dynamo-db-tables.git", branch: "main"),
+        .package(url: "https://github.com/swift-server-community/dynamo-db-tables.git", from: "0.1.0"),
     ],
     targets: [
         // MARK: - Generated API types from OpenAPI spec
