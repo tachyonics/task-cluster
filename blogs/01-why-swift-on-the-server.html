@@ -1,0 +1,222 @@
+<!--
+Title: Building Cloud Services in Swift: Why, How, and What's Coming
+Category: Swift, Server-Side, Cloud Architecture
+Tags: swift, hummingbird, openapi, dynamodb, server-side-swift, cloud, ai-assisted-development
+-->
+
+<h2>The Pitch</h2>
+
+<p>This is the first post in a series where I'll document the development of a distributed application designed to run in the cloud from scratch. We will start small with just a task management service called <strong>task-cluster</strong>. While it's a useful thing in its own right - an API for submitting, prioritising, tracking, and cancelling tasks - its real purpose is to serve as a vehicle for exploring what it looks like to build cloud applications in Swift in 2026.</p>
+
+<p>I want to cover the full arc: choosing a tech stack, designing an API contract, wiring up a web framework, plugging in a database, writing tests that actually catch problems, and eventually deploying and monitoring the thing. Along the way I'll be honest about what works well, what's rough around the edges, and where Swift's server ecosystem still has gaps.</p>
+
+<p>But before any of that, we need to talk about <em>why</em>. Why Swift? Why not reach for Go or Java or Rust - languages with enormous server-side ecosystems and years of production battle-testing? Why OpenAPI as the contract layer? Why DynamoDB instead of Postgres?</p>
+
+<p>These are fair questions, and I want to answer them properly.</p>
+
+<h2>Why Swift on the Server?</h2>
+
+<h3>Personal Bias</h3>
+
+<p>To be up-front, I am not an objective observer. I am a member of the <a href="https://www.swift.org/blog/swift-on-the-server-ecosystem/">Swift Server Workgroup (SSWG)</a>, have given talks at the ServerSide.swift conference and have done Swift Server development at an enterprise level for a former job. I do want Swift on the Server to succeed. So do keep that in mind but also this - after almost a decade being around the Swift Server ecosystem, I am still here. Through a career that has also involved commercial programming in C++, C#, Java and TypeScript, I still believe that Swift deserves to be a serious contender in the cloud space. So let's look at some of the reasons why.</p>
+
+<h3>The Memory Story</h3>
+
+<p>Let's start with the most compelling data point. In June 2025, Apple published <a href="https://www.swift.org/blog/swift-at-apple-migrating-the-password-monitoring-service-from-java/">a case study about migrating their global Password Monitoring Service</a> - the one that checks your saved passwords against known breaches - from Java to Swift. The results were striking:</p>
+
+<ul>
+  <li>A <strong>40% increase in throughput</strong></li>
+  <li>Memory consumption dropped from <strong>tens of gigabytes per instance to hundreds of megabytes</strong> - roughly an order of magnitude</li>
+  <li>Around <strong>50% of their Kubernetes capacity was freed</strong> for other workloads</li>
+  <li><strong>Sub-millisecond p99.9 latency</strong> handling billions of daily requests</li>
+  <li>An <strong>85% reduction in lines of code</strong></li>
+</ul>
+
+<p>This isn't a toy benchmark. It's a globally distributed service handling billions of requests, and the improvement in resource utilisation alone justified the migration. The memory story is particularly important in a cloud context where you're paying for every megabyte of RAM your containers consume. If your Java service needs 4GB per pod and the Swift equivalent runs comfortably in 400MB, you've just cut your compute bill by a significant factor - or you can run ten times as many instances for the same cost.</p>
+
+<p>The reason for this comes down to how Swift manages memory, and it's a layered story. The first layer is <strong>value types</strong>. Swift encourages the use of structs, enums, and tuples - types that live on the stack (or are inlined into their containing storage) rather than being allocated on the heap. A struct doesn't need reference counting or garbage collection at all. When it goes out of scope, its memory is reclaimed instantly as part of the stack frame. In a typical Swift server application, a significant proportion of your types - request models, response bodies, configuration values, domain entities - are structs. That's a lot of objects that never touch the heap and never need any form of memory management overhead.</p>
+
+<p>For reference types (classes), Swift uses <strong>Automatic Reference Counting (ARC)</strong> rather than a garbage collector. Each object tracks how many references point to it, and when that count hits zero, the memory is freed immediately. There's no GC pause, no stop-the-world collection, no heap that bloats between collection cycles. The combination of stack-allocated value types and deterministic ARC for the rest means memory usage stays tight and predictable.</p>
+
+<p>ARC isn't free, though. Every time a reference is copied or released, the runtime performs an atomic increment or decrement on the reference count. This constant per-operation overhead can actually make ARC slower than a well-tuned garbage collector, which pays nothing on individual reference copies and settles up in bulk later. This is one reason Swift's emphasis on value types matters so much in practice: structs sidestep ARC entirely, and the less your hot paths touch reference-counted objects, the less you pay for this overhead.</p>
+
+<p>Swift is also actively pushing further in this direction. <a href="https://github.com/swiftlang/swift-evolution/blob/main/proposals/0390-noncopyable-structs-and-enums.md">Non-copyable types</a> (<code>~Copyable</code>), introduced in Swift 5.9 and expanded since, let you define types that cannot be implicitly duplicated - they must be explicitly consumed or borrowed. This brings Rust-style ownership semantics to Swift, but as an opt-in tool rather than a pervasive language requirement. For server workloads, this is significant: you can model resources like file handles, database connections, or transaction tokens as non-copyable types, guaranteeing at compile time that they're used exactly once and cleaned up deterministically.</p>
+
+<p>All of this adds up to <strong>deterministic performance</strong>. JVM-based languages suffer from GC pauses that can spike tail latency, and they need time to warm up (JIT compilation, class loading). Swift binaries start fast and perform consistently from the first request. That matters for autoscaling, where you want new instances to absorb traffic immediately, and for serverless functions where cold start time directly affects user experience.</p>
+
+<p>Community benchmarks reinforce the pattern. Developers on the <a href="https://forums.swift.org/t/swift-arc-and-memory-footprint-vs-jvm-and-gc/73151">Swift Forums</a> have reported Spring applications consuming around 3GB translating to roughly 100MB in Swift - a 30x reduction. One particularly impressive data point: a Hummingbird echo endpoint stress test handled 52 million requests with memory never exceeding 9MB.</p>
+
+<h3>The Complexity Argument: Swift vs Rust</h3>
+
+<p>If raw efficiency is what we're after, Rust is the obvious alternative. Rust is genuinely faster than Swift in most benchmarks, and its memory model is zero-cost at runtime. So why not use Rust?</p>
+
+<p>Because Rust is <em>hard</em>. Not in a "you'll figure it out in a weekend" way - in a "experienced developers report needing 3 to 6 months to become productive" way. The <a href="https://dakharlamov.substack.com/p/swift-6-versus-rust-clarity-and-performance">2024 Rust developer survey</a> found that only about 53% of Rust users consider themselves proficiently productive, and 31% of non-users cite perceived difficulty as the primary barrier to adoption.</p>
+
+<p>The borrow checker is the main culprit. Rust requires you to satisfy a compile-time ownership model that proves your code is memory-safe without a garbage collector or reference counting. This is genuinely brilliant - it catches entire classes of bugs at compile time - but it means you're constantly thinking about lifetimes, borrowing, and ownership. Simple patterns that are trivial in other languages can require significant restructuring to satisfy the borrow checker.</p>
+
+<p>And even in a world where AI coding agents are writing much of the code for you, this complexity doesn't go away - it shifts. You still need to understand the code being produced in order to review it effectively. A pull request full of lifetime annotations, <code>Pin&lt;Box&lt;dyn Future&gt;&gt;</code> juggling, and borrow checker workarounds requires a reviewer who can reason about those constructs confidently. If the language takes months to reach proficiency in, it takes months before your team can meaningfully review AI-generated output in it too.</p>
+
+<p>Swift takes a different approach. ARC handles memory management transparently for the vast majority of cases. You don't think about ownership unless you need to (such as when developing a heavily used hot path). <a href="https://www.swift.org/blog/swift-6.2-released/">Swift 6's concurrency model</a> gives you compile-time data race safety through actors and sendability checking, which catches a similar class of bugs to Rust's <code>Send</code>/<code>Sync</code> system, but with a much gentler learning curve.</p>
+
+<p>The design philosophy is what some have called <strong>progressive disclosure of complexity</strong>. A beginner can write correct, performant Swift code without understanding advanced features. The language defaults to safe, sensible behaviour and lets you opt into complexity when you need it. Rust inverts this - you start with strict rules and opt into convenience. Both approaches have merit, but for a team that wants to ship cloud services without a multi-month ramp-up period, Swift's approach is more practical.</p>
+
+<h3>The Ergonomics Argument: Swift vs Go</h3>
+
+<p>Go is probably the most common choice for greenfield cloud services today, and for good reason. It compiles fast, deploys as a single binary, has excellent concurrency primitives (goroutines), and a massive ecosystem.</p>
+
+<p>But Go has a collection of idiosyncrasies that have frustrated its own community for years, and the <a href="https://go.dev/blog/survey2025">2025 Go Developer Survey</a> (5,379 respondents) lays them out plainly:</p>
+
+<p><strong>Error handling is the single largest source of developer frustration.</strong> The <code>if err != nil</code> pattern - which you write after virtually every function call - drowns out the actual logic of your code. After seven years and three failed proposals to improve the syntax, the Go team <a href="https://leapcell.medium.com/gos-last-words-on-error-handling-syntax-b74162750665">announced in June 2025</a> that they would stop pursuing changes to error handling for the foreseeable future. This is just how Go works, and it's not going to change.</p>
+
+<p>Swift handles this with <code>throws</code>/<code>try</code>/<code>catch</code>, including typed throws as of Swift 6. Under the hood, Swift's error handling is essentially syntactic sugar over explicit error returns - the compiler transforms <code>throws</code> functions into functions that return a result-or-error value, much like Go does manually. There's no stack unwinding or exception table lookup the way Java's <code>try</code>/<code>catch</code> works, so you get the same performance characteristics as Go's approach without the boilerplate. The difference is entirely ergonomic:</p>
+
+<pre><code>// Go
+task, err := repo.Get(taskId)
+if err != nil {
+    return nil, fmt.Errorf("getting task: %w", err)
+}
+
+// Swift
+let task = try await repo.get(taskId: taskId)</code></pre>
+
+<p>The <code>try</code> keyword is doing real work for readability here. When you're scanning a block of Swift code, every <code>try</code> is a visual marker that says "this call can fail, and if it does, we bail out here." You can trace the error flow of a function at a glance by looking for the <code>try</code> annotations, without the logic being buried inside repetitive <code>if err != nil</code> blocks. In a function that calls five fallible operations, Go gives you five three-line error checks interleaved with your logic; Swift gives you five lines with <code>try</code> at the call site and a single <code>catch</code> block (or implicit propagation) for handling.</p>
+
+<p><strong>No type-safe enumerations.</strong> 65% of Go developers surveyed said they enjoy type-safe enums in other languages they use. Go's <code>const</code> + <code>iota</code> pattern provides no compile-time exhaustiveness checking - you can't get the compiler to tell you when you've forgotten to handle a case. In a task management system where status transitions are critical (pending &rarr; running &rarr; completed, but not completed &rarr; pending), this matters. Swift's enums with associated values and exhaustive <code>switch</code> statements catch these mistakes at compile time.</p>
+
+<p><strong>Nil safety is absent.</strong> Go has no compile-time nil protection. Worse, it has the nil interface trap: a nil value stored inside an interface makes the interface itself non-nil, causing subtle bugs that only manifest at runtime. As one survey respondent put it: <em>"I like Go but I didn't expect it to have nil pointer exceptions :)"</em>. Swift's <code>Optional&lt;T&gt;</code> type makes nullability explicit and compiler-enforced.</p>
+
+<p><strong>Generics arrived late and remain limited.</strong> Go operated without generics for 13 years (they arrived in Go 1.18, March 2022), and the implementation uses partial monomorphisation that can actually <a href="https://planetscale.com/blog/generics-can-make-your-go-code-slower">make generic code slower</a> than interface-based equivalents in some cases. Swift has had generics since version 1.0 in 2014, with protocols, associated types, opaque return types, and sophisticated type constraints.</p>
+
+<p>None of these are dealbreakers individually. Plenty of excellent software is written in Go. But taken together, they represent a tax on expressiveness that Swift simply doesn't impose.</p>
+
+<h3>Concurrency: async/await vs the Alternatives</h3>
+
+<p>Server applications spend most of their time waiting - for database queries to return, for downstream services to respond, for file I/O to complete. How a language handles concurrent waiting is one of the most important factors in how pleasant (or painful) it is to write server code in.</p>
+
+<p>Java's traditional approach is thread-per-request, which is simple to reason about but scales poorly - each blocked thread holds onto memory and OS resources while it waits. Java's answer to this, <code>CompletableFuture</code>, trades simplicity for a callback-chaining API that quickly becomes difficult to follow:</p>
+
+<pre><code>// Java - CompletableFuture
+repository.get(taskId)
+    .thenCompose(task -> {
+        if (task == null) return CompletableFuture.completedFuture(notFound());
+        task.setStatus(Status.CANCELLED);
+        return repository.update(task)
+            .thenApply(updated -> ok(updated));
+    })
+    .exceptionally(ex -> internalError(ex));</code></pre>
+
+<p>Each step is a lambda nested inside the previous one. Error handling is bolted on at the end with <code>exceptionally</code>. Debugging is painful because the stack trace no longer reflects the logical flow of your code. Java 21's virtual threads (Project Loom) improve the scaling problem significantly, but they arrived only in 2023 and the ecosystem is still transitioning - a lot of existing library code, connection pools, and frameworks were written for the <code>CompletableFuture</code> world and don't automatically benefit.</p>
+
+<p>Go takes a different approach: goroutines are lightweight green threads managed by the runtime, and communication happens through channels. This is elegant for fan-out/fan-in patterns, but for the common case of "call something and wait for the result," you're managing channels and <code>select</code> statements manually. There's no language-level way to express "this function is asynchronous" - any function might block a goroutine, and the caller has no indication from the type signature. Error handling for concurrent operations compounds the <code>if err != nil</code> problem, and there's no built-in structured concurrency to ensure spawned goroutines are cleaned up when their parent scope exits.</p>
+
+<p>Swift's <code>async</code>/<code>await</code>, introduced in Swift 5.5 and refined through Swift 6, gives you the readability of synchronous code with the efficiency of non-blocking I/O:</p>
+
+<pre><code>// Swift - async/await
+func cancelTask(taskId: UUID) async throws -> TaskItem {
+    guard let task = try await repository.get(taskId: taskId) else {
+        throw TaskError.notFound
+    }
+    var cancelled = task
+    cancelled.status = .cancelled
+    return try await repository.update(task: cancelled)
+}</code></pre>
+
+<p>This reads like synchronous code. The <code>async</code> and <code>await</code> keywords make suspension points explicit in the type system and at the call site, so you always know which calls might yield. Errors propagate with the same <code>try</code> mechanism as synchronous code - no separate <code>exceptionally</code> handler, no callback nesting. And because the concurrency is <strong>structured</strong> by default (through <code>TaskGroup</code> and <code>async let</code>), child tasks are automatically cancelled when their parent scope exits, preventing the leaked-goroutine problem that plagues long-running Go services.</p>
+
+<p>Structured concurrency also gives you <strong>automatic propagation of task-local values</strong>. Swift's <code>TaskLocal</code> lets you bind contextual metadata - a request ID, a logger, a trace span - to the current task, and every child task inherits it automatically. In a server handling concurrent requests, this means your logging and tracing context flows through <code>async let</code> branches and <code>TaskGroup</code> children without you passing it explicitly as a parameter. Go achieves something similar with <code>context.Context</code>, but it's a value you must thread manually through every function signature - forget to pass it once and the chain breaks.</p>
+
+<p>Swift 6 goes further: the compiler enforces <strong>data race safety at compile time</strong> through actor isolation and <code>Sendable</code> checking. If you accidentally share mutable state across concurrency boundaries, the code won't compile. Go's race detector, by contrast, is a runtime tool - it only catches races that actually occur during a test run, and it's not on by default in production.</p>
+
+<h3>Swift and AI Coding Agents</h3>
+
+<p>Here's one that might raise eyebrows, but I think it's increasingly relevant: Swift's type system makes it particularly well-suited for AI-assisted development.</p>
+
+<p>I'm building this project with significant assistance from an AI coding agent (Claude Code, specifically), and the experience has reinforced something I'd suspected: <strong>strong static type systems create a tight feedback loop that AI agents can exploit effectively</strong>.</p>
+
+<p>A <a href="https://arxiv.org/html/2512.05239v1">2025 academic study</a> found that 94% of compilation errors in LLM-generated code were type-check failures. Think about what that means. When an AI agent generates Swift code that's wrong, the compiler almost always catches it immediately, with a specific error message pointing to the exact problem. The agent can read the error, understand what went wrong, and fix it - often in a single iteration. Compare that to a dynamically typed language where errors only surface at runtime, potentially deep in a specific code path that requires careful test setup to trigger.</p>
+
+<p>Swift's type system is particularly helpful here because of several features that act as guardrails:</p>
+
+<ul>
+  <li><strong>Exhaustive switch statements</strong> on enums force every case to be handled. If an agent forgets a status case, the compiler rejects the code.</li>
+  <li><strong>Non-optional by default</strong> means the agent can't accidentally leave a value nil without explicitly declaring it <code>Optional</code>.</li>
+  <li><strong>Protocol conformance checking</strong> ensures that when the agent implements a repository or controller, every required method is present with the correct signature.</li>
+  <li><strong>Sendable and actor isolation</strong> catch concurrency errors at compile time that would be data races at runtime in other languages.</li>
+</ul>
+
+<p>The result is that the compile-test cycle with an AI agent is remarkably efficient. The agent proposes code, the compiler validates it, and between them they converge on correct implementations faster than either could alone. This isn't a theoretical argument - it's what I've been experiencing throughout this project, and I'll share specific examples as the series progresses.</p>
+
+<h3>The Ecosystem Is Ready (Enough)</h3>
+
+<p>A few years ago, the "why not Swift on the server?" answer was simply: the ecosystem isn't mature enough. That's no longer true.</p>
+
+<p><strong><a href="https://github.com/hummingbird-project/hummingbird">Hummingbird 2</a></strong> is a lightweight, high-performance HTTP framework built on SwiftNIO with full structured concurrency support. It's not trying to be a batteries-included framework like Rails or Django - it gives you a fast, composable foundation and lets you bring your own pieces. For an OpenAPI-driven service where the framework mostly needs to route requests and handle middleware, this is exactly the right level of abstraction.</p>
+
+<p><strong>Apple's <a href="https://www.swift.org/blog/introducing-swift-openapi-generator/">swift-openapi-generator</a></strong> produces type-safe server stubs and request/response types from an OpenAPI specification, as a build plugin that runs at compile time. No stale generated code in your repository, no manual synchronisation step. I'll go into more detail on this shortly.</p>
+
+<p>The <strong><a href="https://swiftpackageindex.com">Swift Package Index</a></strong> now tracks over 9,000 packages (up from 2,500 five years ago). AWS has moved the <strong>Lambda Runtime V2</strong> to AWSLabs, signalling first-class serverless support. Amazon Linux 2023 packages Swift natively. There's a dedicated ServerSide.swift conference. The Swift Server Workgroup (SSWG) continues to coordinate shared infrastructure.</p>
+
+<p>Is the ecosystem as large as Go's or Java's? No, not even close. But for the patterns we're using - an HTTP server with OpenAPI code generation, a repository layer, and a DynamoDB backend - the pieces are all there and they work well together.</p>
+
+<h2>Why OpenAPI?</h2>
+
+<p>If this were just a single service that would never talk to anything else, I'd probably skip the ceremony of an OpenAPI spec and wire up routes directly. But the whole point of this project is to explore patterns for building cloud systems, and cloud systems are made of services that talk to each other.</p>
+
+<p><a href="https://www.openapis.org">OpenAPI</a> gives us a <strong>machine-readable contract</strong> that defines exactly how a service communicates: what endpoints exist, what they accept, what they return, and what errors they produce. This contract becomes the single source of truth, and everything else - server stubs, client SDKs, documentation, validation, contract tests - is derived from it.</p>
+
+<p>The <strong>contract-first</strong> approach is particularly valuable when you're building a system that will eventually have multiple services. You design the API before you write the implementation, which forces you to think about the interface from the consumer's perspective. When a second service needs to call the task API, it generates a client from the same spec, and the types are guaranteed to match. No drift, no "the docs say one thing but the server does another."</p>
+
+<p>Apple's <strong><a href="https://github.com/apple/swift-openapi-generator">swift-openapi-generator</a></strong> makes this practical in Swift. It runs as a build plugin, which means the generated code is produced fresh on every build - if you change the spec, the generated types update automatically, and the compiler tells you everywhere your implementation needs to change. The server stubs take the form of a protocol (<code>APIProtocol</code>) that your controller must conform to. Add a new endpoint to the spec and your project won't compile until you implement it. That's a powerful guarantee.</p>
+
+<p>The generated response types are modelled as enums with cases for each HTTP status code, so you explicitly construct a <code>.created(...)</code> or <code>.notFound(...)</code> response rather than setting a raw integer status code. The compiler ensures you can only return responses that the spec actually defines.</p>
+
+<p>Here's what a handler looks like in practice (from the task-cluster <code>TaskController</code>):</p>
+
+<pre><code>func createTask(_ input: Operations.createTask.Input) async throws
+    -> Operations.createTask.Output
+{
+    switch input.body {
+    case .json(let request):
+        guard (1...10).contains(request.priority) else {
+            return .badRequest(.init())
+        }
+        let task = TaskItem(
+            title: request.title,
+            priority: request.priority
+        )
+        let created = try await repository.create(task: task)
+        return .created(.init(body: .json(created.toResponse())))
+    }
+}</code></pre>
+
+<p>The input type, the body enum, the output type, and the response structure are all generated from the spec. You write the business logic; the OpenAPI tooling handles the serialisation ceremony.</p>
+
+<h2>Why DynamoDB?</h2>
+
+<p>The choice of database depends heavily on the shape of your data and how you access it. For a task management service, the data model is straightforward: each task is an independent record, identified by a UUID, with no complex relationships to other entities. You create a task, fetch it by ID, update its status or priority, and cancel it. These are all <strong>single-item, key-based operations</strong>.</p>
+
+<p>This is exactly the access pattern <a href="https://aws.amazon.com/dynamodb/">DynamoDB</a> is designed for. It provides consistent single-digit millisecond latency at any scale - whether you have a hundred tasks or a hundred million. There are no joins, no foreign key lookups, no query planner making decisions about how to access your data. You ask for a specific item by its key and you get it back, fast, every time.</p>
+
+<p>The operational model is equally appealing. DynamoDB is fully managed: no servers to provision, no patches to apply, no replicas to configure, no maintenance windows. With on-demand capacity mode, you pay per request with no minimum commitment - ideal for a service with variable or unpredictable traffic. Backups, encryption at rest, and monitoring come built in.</p>
+
+<p>This isn't the right choice for every application. If your data has complex relationships that benefit from normalised schemas and SQL joins - think financial transactions spanning multiple accounts, or a content management system with deeply nested hierarchies - a relational database is the better tool. If you need ad-hoc analytical queries across arbitrary dimensions, DynamoDB will fight you every step of the way.</p>
+
+<p>But for a service where records are self-contained entities accessed by known keys with a small number of well-defined query patterns? DynamoDB is a natural fit. And because we've put the storage behind a repository protocol, swapping in a different backend is a matter of writing a new implementation, not restructuring the application. In fact, task-cluster already ships with both an in-memory implementation (for development and testing) and a DynamoDB implementation (for production), switchable via an <a href="https://github.com/swiftlang/swift-evolution/blob/main/proposals/0450-swiftpm-package-traits.md">SPM build trait</a>.</p>
+
+<p>That covers the reasoning behind the technology choices. In the next posts, we'll put them into practice and see how they hold up when we start writing actual code.</p>
+
+<h2>What's Next</h2>
+
+<p>In upcoming posts, I'll dig into the details:</p>
+
+<ul>
+  <li>Setting up a Swift 6.2 project with Hummingbird 2 and the OpenAPI build plugin</li>
+  <li>Designing the OpenAPI spec and understanding how the generated code works</li>
+  <li>Testing strategies: mocking and unit tests, integration testing and local dependencies</li>
+  <li>Configuration management with swift-configuration</li>
+  <li>Deployment: containers, CI/CD, and eventually running this on AWS</li>
+</ul>
+
+<p>If you're curious about server-side Swift, want to see how OpenAPI-driven development works in practice, or just want to follow along, I hope you'll stick around.</p>
+
+<p>The source code is available as we go. Let's build something.</p>

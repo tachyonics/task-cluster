@@ -1,0 +1,168 @@
+<!--
+Title: Building the Data Layer: Domain Models, Repository Protocol, and DynamoDB
+Category: Swift, Server-Side, Cloud Architecture
+Tags: swift, dynamodb, repository-pattern, domain-modeling, ai-assisted-development
+-->
+
+<h2>Starting from an Empty Repository</h2>
+
+<p>In the <a href="#">previous post</a>, we talked about why Swift, why OpenAPI, and why DynamoDB. Now it's time to start building. In this post, we'll create the data layer for task-cluster: the domain model, a repository protocol for storage abstraction, and a DynamoDB implementation.</p>
+
+<p>I'm building this with the help of an AI coding agent (Claude Code), so rather than presenting polished code blocks, I'll walk through the prompts I used at each step and discuss what they produced and why. If you're following along with your own AI assistant - or just writing the code by hand - the intent behind each step matters more than the exact wording.</p>
+
+<p>We're starting from an empty Swift package. By the end of this post, we'll have two targets - <code>TaskClusterModel</code> and <code>TaskClusterDynamoDBModel</code> - with a clean separation between domain logic and persistence.</p>
+
+<h2>Step 1: Initialising the Package</h2>
+
+<p>First, we need a Swift package. If you don't already have one:</p>
+
+<pre><code>mkdir task-cluster && cd task-cluster
+swift package init --type executable --name task-cluster</code></pre>
+
+<p>This gives us a <code>Package.swift</code> with a tools version and an executable target. We'll be restructuring it heavily, so the scaffolded code is mostly a starting point. Make sure the tools version is set to <strong>6.2</strong> - we'll need features from the latest Swift toolchain.</p>
+
+<pre><code>// swift-tools-version: 6.2</code></pre>
+
+<h2>Step 2: The Domain Model</h2>
+
+<p>Before we think about databases or APIs, we need to define what a task <em>is</em>. This is the core of the data layer - a set of types that represent the domain, with no dependencies on any framework or library.</p>
+
+<p>So what does a task look like as a concept? At minimum, it needs an identity (a unique ID), a description of the work (a title, and optionally a longer description), and some notion of importance (priority). Tasks also exist in time - they're created, they may have a deadline, and they move through a lifecycle. That lifecycle is the status: a task starts as <strong>pending</strong>, transitions to <strong>running</strong> when work begins, and eventually reaches a terminal state - <strong>completed</strong>, <strong>failed</strong>, or <strong>cancelled</strong>. We also want to track when things happened, so every task carries a <code>createdAt</code> and <code>updatedAt</code> timestamp.</p>
+
+<p>Here's how I prompted the agent:</p>
+
+<blockquote>
+<p>Create a <code>TaskClusterModel</code> target in Package.swift with no dependencies. Add a file <code>Sources/TaskClusterModel/TaskModel.swift</code> that defines:</p>
+<ul>
+  <li>A <code>TaskStatus</code> enum with cases: pending, running, completed, failed, cancelled. It should be a <code>String</code>-backed, <code>Codable</code>, <code>Sendable</code> enum.</li>
+  <li>A <code>TaskItem</code> struct that is <code>Codable</code> and <code>Sendable</code>, with properties: <code>taskId</code> (UUID), <code>title</code> (String), <code>description</code> (String?), <code>priority</code> (Int), <code>dueBy</code> (Date?), <code>status</code> (TaskStatus), <code>createdAt</code> (Date), <code>updatedAt</code> (Date). Provide a public initialiser with sensible defaults - <code>taskId</code> should default to a new UUID, <code>status</code> to <code>.pending</code>, and the timestamps to the current date.</li>
+</ul>
+<p>Everything should be package access level. The target should have zero external dependencies.</p>
+</blockquote>
+
+<h3>Why these choices?</h3>
+
+<p><strong>Zero dependencies.</strong> The domain model target has an empty <code>dependencies: []</code> array in Package.swift. This is deliberate. Your domain types are the foundation everything else builds on - they shouldn't be coupled to a web framework, a database library, or anything else. If you later decide to swap Hummingbird for Vapor, or DynamoDB for Postgres, <code>TaskClusterModel</code> doesn't change.</p>
+
+<p><strong>Codable and Sendable.</strong> Every type in the model conforms to both. <code>Codable</code> because these types will be serialised to JSON (for API responses) and to DynamoDB's storage format. <code>Sendable</code> because Swift 6 enforces concurrency safety, and any type that crosses an isolation boundary - which domain types inevitably do - must be <code>Sendable</code>. Since <code>TaskItem</code> is a struct composed entirely of <code>Sendable</code> types (UUID, String, Int, Date, Optional, and our own <code>Sendable</code> enum), the conformance is automatic.</p>
+
+<p><strong>String-backed enum.</strong> <code>TaskStatus</code> uses <code>String</code> raw values, which means <code>Codable</code> synthesis produces clean JSON: <code>"status": "pending"</code> rather than <code>"status": 0</code>. The raw strings also make debugging and logging more readable, and they'll map cleanly to the OpenAPI spec's string enum when we build the API layer later.</p>
+
+<p><strong>Mutable properties.</strong> <code>TaskItem</code> uses <code>var</code> for its properties rather than <code>let</code>. This might seem surprising - immutable-by-default is generally good practice - but for a domain model that goes through status transitions and priority updates, mutability on a value type is fine. When you write <code>var task = existingTask; task.status = .cancelled</code>, you get a copy with the new status. The original is untouched. Value semantics give you the safety guarantees that immutability would, without the ceremony of builder patterns or <code>with</code>-style copy methods.</p>
+
+<h2>Step 3: The Repository Protocol</h2>
+
+<p>With the domain model defined, we need an abstraction for storage. The repository pattern gives us a protocol that defines <em>what</em> we can do with tasks, without specifying <em>how</em>. Different implementations can back this with an in-memory dictionary, DynamoDB, Postgres, or anything else.</p>
+
+<blockquote>
+<p>Add a file <code>Sources/TaskClusterModel/TaskRepository.swift</code> to the <code>TaskClusterModel</code> target. Define a public <code>TaskRepository</code> protocol that is <code>Sendable</code>, with three methods:</p>
+<ul>
+  <li><code>create(task: TaskItem) async throws -> TaskItem</code></li>
+  <li><code>get(taskId: UUID) async throws -> TaskItem?</code></li>
+  <li><code>update(task: TaskItem) async throws -> TaskItem</code></li>
+</ul>
+</blockquote>
+
+<p>A few things worth noting about this interface:</p>
+
+<p><strong>The protocol lives in the model target, not a separate "repository" target.</strong> You might be tempted to create a dedicated package for the abstraction, but at this scale that's unnecessary indirection. The repository protocol is part of the domain vocabulary - it defines the operations the domain supports. Implementations live elsewhere; the contract lives with the model.</p>
+
+<p><strong>The protocol is <code>Sendable</code>.</strong> Any type conforming to <code>TaskRepository</code> must itself be <code>Sendable</code>, which means it can be safely shared across concurrency domains. This is important because the repository will be injected into request handlers that may run concurrently. Swift 6's concurrency checking will enforce this at compile time - if you write a non-<code>Sendable</code> repository implementation, the compiler will tell you.</p>
+
+<p><strong><code>get</code> returns an optional.</strong> A missing task isn't an error in the domain sense - it's a valid outcome. The caller decides what to do with <code>nil</code> (return a 404, throw an error, skip processing). Throwing on "not found" would force every caller to catch and inspect the error type, which is more ceremony for no benefit.</p>
+
+<p><strong><code>create</code> and <code>update</code> return the task.</strong> This lets implementations enrich the returned value if needed (adding server-generated fields, for example) and gives callers a consistent pattern: call the method, use the returned value. Even if the current implementation just returns the input unchanged, the contract allows for richer behaviour later.</p>
+
+<p><strong>No <code>delete</code> method.</strong> The task-cluster domain doesn't support deletion - tasks are cancelled, not removed. The API has a cancel endpoint that transitions status, but the record persists. If we need deletion later, we add it to the protocol then. Don't design for hypothetical requirements.</p>
+
+<h2>Step 4: The DynamoDB Target</h2>
+
+<p>Now we need a separate target for the DynamoDB implementation. This keeps the persistence logic out of the domain model - <code>TaskClusterModel</code> stays dependency-free, and <code>TaskClusterDynamoDBModel</code> brings in only what it needs.</p>
+
+<blockquote>
+<p>Add the <a href="https://github.com/swift-server-community/dynamo-db-tables">dynamo-db-tables</a> package dependency to Package.swift. Create a <code>TaskClusterDynamoDBModel</code> target that depends on <code>TaskClusterModel</code> and on the <code>DynamoDBTables</code> product.</p>
+</blockquote>
+
+<p>The target declaration is straightforward:</p>
+
+<pre><code>.target(
+    name: "TaskClusterDynamoDBModel",
+    dependencies: [
+        "TaskClusterModel",
+        .product(name: "DynamoDBTables", package: "dynamo-db-tables"),
+    ]
+),</code></pre>
+
+<p>The dependency graph is now clear: <code>TaskClusterDynamoDBModel</code> depends on <code>TaskClusterModel</code> for the domain types and on <code>DynamoDBTables</code> for the persistence layer. Higher-level targets that don't need DynamoDB can depend on <code>TaskClusterModel</code> alone without pulling in the DynamoDB library.</p>
+
+<h2>Step 5: The DynamoDB Repository Implementation</h2>
+
+<p>With the target structure in place, we can implement the DynamoDB-backed repository. The <a href="https://github.com/swift-server-community/dynamo-db-tables">dynamo-db-tables</a> library provides a Swift-native abstraction over DynamoDB that works with <code>Codable</code> types. It handles serialisation, key management, and optimistic concurrency control.</p>
+
+<blockquote>
+<p>Create <code>Sources/TaskClusterDynamoDBModel/DynamoDBTaskRepository.swift</code>. Implement a <code>DynamoDBTaskRepository</code> struct that:</p>
+<ul>
+  <li>Is generic over <code>Table: DynamoDBCompositePrimaryKeyTable &amp; Sendable</code></li>
+  <li>Conforms to <code>TaskRepository</code></li>
+  <li>Uses a type alias <code>TaskDatabaseItem = StandardTypedDatabaseItem&lt;TaskItem&gt;</code></li>
+  <li>Uses partition key <code>"TASK"</code> and sort key <code>"TASK#\(taskId)"</code> for all operations</li>
+  <li>Implements <code>create</code> using <code>insertItem</code>, <code>get</code> using <code>getItem</code> (returning the <code>rowValue</code>), and <code>update</code> that fetches the existing item first and uses <code>createUpdatedItem</code></li>
+  <li>Defines a <code>TaskRepositoryError.notFound</code> error for update operations on missing items</li>
+</ul>
+</blockquote>
+
+<h3>Design decisions in the implementation</h3>
+
+<p><strong>Generic over the table type.</strong> The repository takes a generic <code>Table</code> parameter rather than a concrete DynamoDB client. This is critical for testing - in our tests, we'll pass an <code>InMemoryDynamoDBCompositePrimaryKeyTable</code> that the library provides, giving us a fast, isolated test without any AWS infrastructure. In production, we'll pass a real DynamoDB table client.</p>
+
+<p><strong>The key schema.</strong> Every task uses partition key <code>"TASK"</code> and sort key <code>"TASK#&lt;uuid&gt;"</code>. This is a common DynamoDB pattern - the partition key groups items by entity type, and the sort key provides uniqueness within the partition. For our current access patterns (get by ID, create, update), this is all we need. If we later need to query tasks by status or priority, we'd add a Global Secondary Index with a different key structure, but we don't design for that until we need it.</p>
+
+<p><strong>Optimistic concurrency on update.</strong> The <code>update</code> method fetches the existing item first, then calls <code>createUpdatedItem</code> to produce a new version, and finally calls <code>updateItem</code> with both the new and existing items. This is how dynamo-db-tables implements optimistic concurrency control - the library checks that the item hasn't been modified between the read and the write. If another request updated the same task concurrently, the update will fail with a conditional check error rather than silently overwriting the other change. This is exactly the behaviour you want in a concurrent system.</p>
+
+<p><strong>The <code>StandardTypedDatabaseItem</code> wrapper.</strong> DynamoDB items need metadata beyond the domain value - the primary key, a version number for optimistic locking, timestamps for the database row itself. <code>StandardTypedDatabaseItem&lt;TaskItem&gt;</code> wraps our domain struct with this metadata. When reading, we extract the domain value with <code>.rowValue</code>. When writing, the library manages the metadata automatically. Our domain type stays clean - <code>TaskItem</code> doesn't know it's being stored in DynamoDB.</p>
+
+<h2>Step 6: Testing the DynamoDB Repository</h2>
+
+<p>We want to test the repository implementation without connecting to AWS. The dynamo-db-tables library provides <code>InMemoryDynamoDBCompositePrimaryKeyTable</code>, which behaves like a real DynamoDB table but stores everything in memory. This gives us fast, deterministic tests that verify our key schema, serialisation, and error handling.</p>
+
+<blockquote>
+<p>Create a <code>TaskClusterDynamoDBModelTests</code> test target that depends on <code>TaskClusterDynamoDBModel</code>, <code>TaskClusterModel</code>, and <code>DynamoDBTables</code>. Add tests for:</p>
+<ul>
+  <li>Create a task and retrieve it by ID - verify all fields round-trip correctly</li>
+  <li>Get returns nil for a non-existent task ID</li>
+  <li>Update modifies a stored task and the changes persist</li>
+  <li>Update throws for a non-existent task</li>
+  <li>Creating the same task twice throws (duplicate key)</li>
+</ul>
+<p>Use <code>InMemoryDynamoDBCompositePrimaryKeyTable</code> as the table implementation.</p>
+</blockquote>
+
+<p>Each test instantiates a fresh <code>InMemoryDynamoDBCompositePrimaryKeyTable</code> and a <code>DynamoDBTaskRepository</code> wrapping it. There's no shared state between tests, no setup/teardown ceremony. The tests verify the contract: can we store a task and get it back? Do all fields survive the round-trip through DynamoDB serialisation? Does update correctly reject a non-existent item? Does insert correctly reject a duplicate?</p>
+
+<p>The duplicate-key test is particularly important. In production DynamoDB, <code>insertItem</code> will fail if an item with the same key already exists - this prevents accidental overwrites. The in-memory table faithfully replicates this behaviour, so we can verify our code handles it correctly without deploying anything.</p>
+
+<p>To run these tests:</p>
+
+<pre><code>swift test --filter TaskClusterDynamoDBModelTests</code></pre>
+
+<h2>What We Have So Far</h2>
+
+<p>Two targets, clean separation, zero coupling between domain and persistence:</p>
+
+<pre><code>Sources/
+  TaskClusterModel/
+    TaskModel.swift          # TaskItem, TaskStatus
+    TaskRepository.swift     # Repository protocol
+  TaskClusterDynamoDBModel/
+    DynamoDBTaskRepository.swift  # DynamoDB implementation
+Tests/
+  TaskClusterDynamoDBModelTests/
+    DynamoDBTaskRepositoryTests.swift  # 5 tests</code></pre>
+
+<p><code>TaskClusterModel</code> has zero external dependencies - it's pure Swift. <code>TaskClusterDynamoDBModel</code> depends on <code>TaskClusterModel</code> for the domain types and on <code>DynamoDBTables</code> for persistence. Higher-level targets that don't need DynamoDB can depend on <code>TaskClusterModel</code> alone.</p>
+
+<p>The repository protocol is the seam between these layers. Higher-level code (controllers, request handlers) will depend on <code>TaskRepository</code> without knowing or caring which implementation backs it. We'll also add an <code>InMemoryTaskRepository</code> for local development - a simple actor wrapping a dictionary - but that's a trivial implementation that doesn't warrant its own walkthrough.</p>
+
+<h2>What's Next</h2>
+
+<p>We have domain types and persistence. The next step is to expose them through an API. In the next post, we'll design the OpenAPI spec, set up the swift-openapi-generator build plugin, and wire a Hummingbird controller to the repository. That's where the contract-first approach from the first post starts paying off.</p>
