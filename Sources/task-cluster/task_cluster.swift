@@ -2,7 +2,7 @@
 // https://docs.swift.org/swift-book
 
 @main
-struct task_cluster {
+struct TaskCluster {
     static func main() {
         print("Hello, world!")
     }
