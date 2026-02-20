@@ -10,3 +10,6 @@ function_body_length:
   error: 75
 analyzer_rules:
   - unused_import
+unused_import:
+  always_keep_imports:
+    - Foundation
