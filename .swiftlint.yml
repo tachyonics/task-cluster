@@ -1,0 +1,12 @@
+disabled_rules:
+  - trailing_whitespace
+  - void_return
+excluded:
+  - .build
+  - Package.swift
+line_length: 150
+function_body_length:
+  warning: 50
+  error: 75
+analyzer_rules:
+  - unused_import

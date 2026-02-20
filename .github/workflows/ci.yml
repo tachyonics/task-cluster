@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  BuildTestAndAnalyze:
+    runs-on: ubuntu-latest
+    container:
+      image: swift:6.2
+    steps:
+      - name: Install dependencies
+        run: apt-get update && apt-get install -y curl unzip
+      - uses: actions/checkout@v4
+      - name: Build
+        run: swift build -c release -Xswiftc -strict-concurrency=complete
+      - name: Run tests
+        run: swift test -v 2>&1 | tee build.log
+      - name: Install SwiftLint
+        run: |
+          curl -sL https://github.com/realm/SwiftLint/releases/download/0.63.2/swiftlint_linux_amd64.zip -o swiftlint.zip
+          unzip -o swiftlint.zip -d /usr/local/bin
+          chmod +x /usr/local/bin/swiftlint
+      - name: Analyze unused imports
+        run: swiftlint analyze --strict --quiet --compiler-log-path build.log
+  SwiftLint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: SwiftLint
+        uses: norio-nomura/action-swiftlint@3.2.1
+  analyzer_rules:
+  SwiftFormat:
+    runs-on: ubuntu-latest
+    container:
+      image: swift:6.2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run swift-format
+        run: swift-format format --recursive --in-place .
+      - name: Check for formatting differences
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git diff --exit-code
+  Coverage:
+    runs-on: ubuntu-latest
+    container:
+      image: swift:6.2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run tests with coverage
+        run: swift test --enable-code-coverage
+      - name: Convert to LCOV
+        run: |
+          BIN=$(swift build --show-bin-path)
+          llvm-cov export \
+            -format=lcov \
+            -instr-profile=.build/debug/codecov/default.profdata \
+            "$BIN/task-clusterPackageTests.xctest" \
+            -ignore-filename-regex=".build|Tests" \
+            > coverage.lcov
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.lcov
+          fail_ci_if_error: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
