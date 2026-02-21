@@ -49,6 +49,8 @@ jobs:
     container:
       image: swift:6.2
     steps:
+      - name: Install dependencies                                                                                                                                              
+        run: apt-get update && apt-get install -y curl
       - uses: actions/checkout@v6
       - name: Run tests with coverage
         run: swift test --enable-code-coverage --xunit-output test-results.xml
