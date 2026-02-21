@@ -14,7 +14,7 @@ jobs:
     steps:
       - name: Install dependencies
         run: apt-get update && apt-get install -y curl unzip
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build
         run: swift build -c release -Xswiftc -strict-concurrency=complete
       - name: Run tests
@@ -29,7 +29,7 @@ jobs:
   SwiftLint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: SwiftLint
         uses: norio-nomura/action-swiftlint@3.2.1
   SwiftFormat:
@@ -37,7 +37,7 @@ jobs:
     container:
       image: swift:6.2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Run swift-format
         run: swift-format format --recursive --in-place .
       - name: Check for formatting differences
@@ -49,7 +49,7 @@ jobs:
     container:
       image: swift:6.2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Run tests with coverage
         run: swift test --enable-code-coverage
       - name: Convert to LCOV
@@ -73,7 +73,7 @@ jobs:
     container:
       image: swift:6.2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Check for API breaking changes
