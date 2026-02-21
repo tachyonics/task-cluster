@@ -49,9 +49,11 @@ jobs:
     container:
       image: swift:6.2
     steps:
+      - name: Install dependencies                                                                                                                                              
+        run: apt-get update && apt-get install -y curl
       - uses: actions/checkout@v6
       - name: Run tests with coverage
-        run: swift test --enable-code-coverage
+        run: swift test --enable-code-coverage --xunit-output test-results.xml
       - name: Convert to LCOV
         run: |
           BIN=$(swift build --show-bin-path)
@@ -62,9 +64,19 @@ jobs:
             -ignore-filename-regex=".build|Tests" \
             > coverage.lcov
       - name: Upload coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
+        if: always()
         with:
           files: coverage.lcov
+          fail_ci_if_error: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: Upload test results
+        uses: codecov/codecov-action@v5
+        if: always()
+        with:
+          files: test-results.xml
+          report_type: test_results
           fail_ci_if_error: true
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
