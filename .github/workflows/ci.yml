@@ -51,7 +51,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Run tests with coverage
-        run: swift test --enable-code-coverage
+        run: swift test --enable-code-coverage --xunit-output test-results.xml
+      - name: Publish test report
+        uses: mikepenz/action-junit-report@v4
+        if: always()
+        with:
+          report_paths: test-results.xml
       - name: Convert to LCOV
         run: |
           BIN=$(swift build --show-bin-path)
