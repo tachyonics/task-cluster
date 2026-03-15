@@ -165,7 +165,7 @@ struct TaskControllerTests {
 
                 let responseBody = try JSONDecoder().decode(
                     TaskResponseBody.self,
-                    from: response.body
+                    from: Data(buffer: response.body)
                 )
                 #expect(responseBody.status == "cancelled")
             }
