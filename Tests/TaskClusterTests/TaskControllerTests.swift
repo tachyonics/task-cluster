@@ -1,6 +1,7 @@
 import Foundation
 import Hummingbird
 import HummingbirdTesting
+import NIOFoundationCompat
 import Logging
 import Smockable
 import Testing
