@@ -1,0 +1,167 @@
+openapi: "3.1.0"
+info:
+  title: Task Cluster API
+  version: "1.0.0"
+  description: A task management API.
+
+paths:
+  /task:
+    post:
+      operationId: createTask
+      summary: Create a task
+      tags:
+        - Tasks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTaskRequest"
+      responses:
+        "201":
+          description: Task created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskItem"
+        "400":
+          description: Invalid input.
+
+  /task/{taskId}:
+    get:
+      operationId: getTask
+      summary: Get a task by ID
+      tags:
+        - Tasks
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: Task found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskItem"
+        "404":
+          description: Task not found.
+
+  /task/{taskId}/priority:
+    patch:
+      operationId: updateTaskPriority
+      summary: Update a task's priority
+      tags:
+        - Tasks
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTaskPriorityRequest"
+      responses:
+        "200":
+          description: Priority updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskItem"
+        "400":
+          description: Invalid priority.
+        "404":
+          description: Task not found.
+
+  /task/{taskId}/cancel:
+    post:
+      operationId: cancelTask
+      summary: Cancel a task
+      tags:
+        - Tasks
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: Task cancelled successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskItem"
+        "404":
+          description: Task not found.
+        "409":
+          description: Task cannot be cancelled.
+
+components:
+  parameters:
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    TaskStatus:
+      type: string
+      enum:
+        - pending
+        - running
+        - completed
+        - failed
+        - cancelled
+
+    CreateTaskRequest:
+      type: object
+      required:
+        - title
+        - priority
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        priority:
+          type: integer
+        dueBy:
+          type: string
+          format: date-time
+
+    UpdateTaskPriorityRequest:
+      type: object
+      required:
+        - priority
+      properties:
+        priority:
+          type: integer
+
+    TaskItem:
+      type: object
+      required:
+        - taskId
+        - title
+        - priority
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        taskId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        priority:
+          type: integer
+        dueBy:
+          type: string
+          format: date-time
+        status:
+          $ref: "#/components/schemas/TaskStatus"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
