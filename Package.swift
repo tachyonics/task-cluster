@@ -15,6 +15,7 @@ let package = Package(
         .package(url: "https://github.com/swift-server/swift-openapi-hummingbird", from: "2.0.1"),
         .package(url: "https://github.com/hummingbird-project/hummingbird", from: "2.0.0"),
         .package(url: "https://github.com/tachyonics/smockable", from: "1.0.0-alpha.1"),
+        .package(url: "https://github.com/apple/swift-configuration", from: "1.1.0"),
     ],
     targets: [
         .target(
@@ -47,7 +48,14 @@ let package = Package(
             ]
         ),
         .executableTarget(
-            name: "task-cluster"
+            name: "TaskCluster",
+            dependencies: [
+                "TaskClusterApp",
+                "TaskClusterDynamoDBModel",
+                .product(name: "DynamoDBTables", package: "dynamo-db-tables"),
+                .product(name: "Configuration", package: "swift-configuration"),
+                .product(name: "Hummingbird", package: "hummingbird"),
+            ]
         ),
         .testTarget(
             name: "TaskClusterTests",
