@@ -1,0 +1,17 @@
+# Build artifacts — never what we want in a Docker image.
+.build/
+.swiftpm/
+
+# IDE / editor scratch
+.DS_Store
+*.xcodeproj
+.idea/
+.vscode/
+
+# Version control
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+.dockerignore
