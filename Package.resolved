@@ -1,5 +1,5 @@
 {
-  "originHash" : "a04a67e139811f3047795443fe2a8c3d9b86ad4638ed43293d4037c84c1dc1c3",
+  "originHash" : "c7de66dbb79988dde075ac7abca253214594f0700d48f7912ea6d4d2ecc5a520",
   "pins" : [
     {
       "identity" : "async-http-client",
@@ -71,15 +71,6 @@
       "state" : {
         "revision" : "ef63c346d05f4fa7c9ca883f92631fd139eb2cfe",
         "version" : "1.17.1"
-      }
-    },
-    {
-      "identity" : "opentracing-objc",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/undefinedlabs/opentracing-objc",
-      "state" : {
-        "revision" : "18c1a35ca966236cee0c5a714a51a73ff33384c1",
-        "version" : "0.5.2"
       }
     },
     {
@@ -285,8 +276,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-openapi-generator",
       "state" : {
-        "revision" : "ecf21fdf08d4cf30ca506bb822f5fe580e090efb",
-        "version" : "1.10.4"
+        "revision" : "73997cc62c2193d5046e431c9d546119dda14502",
+        "version" : "1.11.1"
       }
     },
     {
@@ -350,15 +341,6 @@
       "state" : {
         "revision" : "7c6ad0fc39d0763e0b699210e4124afd5041c5df",
         "version" : "1.6.4"
-      }
-    },
-    {
-      "identity" : "thrift-swift",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/undefinedlabs/Thrift-Swift",
-      "state" : {
-        "revision" : "18ff09e6b30e589ed38f90a1af23e193b8ecef8e",
-        "version" : "1.1.2"
       }
     },
     {
