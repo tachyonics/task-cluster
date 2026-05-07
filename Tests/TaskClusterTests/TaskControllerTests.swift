@@ -2,7 +2,6 @@ import Foundation
 import Hummingbird
 import HummingbirdTesting
 import Logging
-import NIOFoundationCompat
 import Smockable
 import Testing
 
@@ -166,7 +165,7 @@ struct TaskControllerTests {
 
                 let responseBody = try JSONDecoder().decode(
                     TaskResponseBody.self,
-                    from: Data(buffer: response.body)
+                    from: Data(response.body.readableBytesView)
                 )
                 #expect(responseBody.status == "cancelled")
             }
