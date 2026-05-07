@@ -16,6 +16,7 @@ let package = Package(
         .package(url: "https://github.com/hummingbird-project/hummingbird", from: "2.0.0"),
         .package(url: "https://github.com/tachyonics/smockable", from: "1.0.0-rc.2"),
         .package(url: "https://github.com/apple/swift-configuration", from: "1.1.0"),
+        .package(url: "https://github.com/apple/swift-nio", from: "2.99.0"),
     ],
     targets: [
         .target(
@@ -65,6 +66,7 @@ let package = Package(
                 .product(name: "Smockable", package: "smockable"),
                 .product(name: "Hummingbird", package: "hummingbird"),
                 .product(name: "HummingbirdTesting", package: "hummingbird"),
+                .product(name: "NIOFoundationCompat", package: "swift-nio"),
             ]
         ),
         .testTarget(
