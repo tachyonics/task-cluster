@@ -19,6 +19,26 @@
             "target": "task-cluster",
             "configuration": "release",
             "preLaunchTask": "swift: Build Release task-cluster"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:task-cluster}",
+            "name": "Debug TaskCluster",
+            "target": "TaskCluster",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug TaskCluster"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:task-cluster}",
+            "name": "Release TaskCluster",
+            "target": "TaskCluster",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release TaskCluster"
         }
     ]
 }

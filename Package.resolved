@@ -1,5 +1,5 @@
 {
-  "originHash" : "dc70ba10b2a937e59046a30de2c080524828a4db78710b2935c74e60d3ff2f1f",
+  "originHash" : "dd04a00968c7f37244360da34ab123cd12698a6cef71334c4423b3989bbc39c7",
   "pins" : [
     {
       "identity" : "async-http-client",
@@ -24,8 +24,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/awslabs/aws-sdk-swift.git",
       "state" : {
-        "revision" : "4c183145641821f87ced406190b607f072d23273",
-        "version" : "1.6.109"
+        "revision" : "cff67986b2be6af3a8119bae3cfa391e7233b28e",
+        "version" : "1.6.110"
       }
     },
     {
@@ -33,8 +33,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/swift-server-community/dynamo-db-tables",
       "state" : {
-        "revision" : "8fcd5ac6483f50bdfcad40b36d5faf5e011fe19a",
-        "version" : "1.0.0-rc.1"
+        "revision" : "c02ca3516aaae9745e68e9ab48fccf196b965f53",
+        "version" : "1.0.0-rc.2"
       }
     },
     {
@@ -132,8 +132,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-collections",
       "state" : {
-        "revision" : "6675bc0ff86e61436e615df6fc5174e043e57924",
-        "version" : "1.4.1"
+        "revision" : "03cc312c2c933ed87abace34044a5dff7a3117c1",
+        "version" : "1.5.0"
       }
     },
     {
@@ -303,8 +303,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/swiftlang/swift-syntax",
       "state" : {
-        "revision" : "4799286537280063c85a32f09884cfbca301b1a1",
-        "version" : "602.0.0"
+        "revision" : "9de99a78f099e59caf2b2beec65a4c45d54b2081",
+        "version" : "603.0.1"
       }
     },
     {
