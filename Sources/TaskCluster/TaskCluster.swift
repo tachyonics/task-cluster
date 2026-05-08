@@ -1,7 +1,5 @@
 import Configuration
-import DynamoDBTables
 import Hummingbird
-import Logging
 import TaskClusterApp
 import TaskClusterDynamoDBModel
 
