@@ -10,7 +10,7 @@ jobs:
   BuildTestAndAnalyze:
     runs-on: ubuntu-latest
     container:
-      image: swift:6.2
+      image: swift:6.3.1
     steps:
       - name: Install dependencies
         run: apt-get update && apt-get install -y curl unzip
@@ -35,7 +35,7 @@ jobs:
   SwiftFormat:
     runs-on: ubuntu-latest
     container:
-      image: swift:6.2
+      image: swift:6.3.1
     steps:
       - uses: actions/checkout@v6
       - name: Run swift-format
@@ -47,7 +47,7 @@ jobs:
   Coverage:
     runs-on: ubuntu-latest
     container:
-      image: swift:6.2
+      image: swift:6.3.1
     steps:
       - name: Install dependencies                                                                                                                                              
         run: apt-get update && apt-get install -y curl
@@ -83,7 +83,7 @@ jobs:
   APIBreakage:
     runs-on: ubuntu-latest
     container:
-      image: swift:6.2
+      image: swift:6.3.1
     steps:
       - uses: actions/checkout@v6
         with:
