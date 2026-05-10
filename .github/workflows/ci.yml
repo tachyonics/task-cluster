@@ -13,7 +13,7 @@ jobs:
       image: swift:6.3.1
     steps:
       - name: Install dependencies
-        run: apt-get update && apt-get install -y curl unzip
+        run: apt-get update && apt-get install -y curl unzip docker.io
       - uses: actions/checkout@v6
       - name: Build
         run: swift build -c release -Xswiftc -strict-concurrency=complete
@@ -49,8 +49,8 @@ jobs:
     container:
       image: swift:6.3.1
     steps:
-      - name: Install dependencies                                                                                                                                              
-        run: apt-get update && apt-get install -y curl
+      - name: Install dependencies
+        run: apt-get update && apt-get install -y curl docker.io
       - uses: actions/checkout@v6
       - name: Run tests with coverage
         run: swift test --enable-code-coverage --xunit-output test-results.xml
