@@ -25,18 +25,35 @@ jobs:
           echo "::group::docker buildx ls"; docker buildx ls || true; echo "::endgroup::"
           echo "::group::docker network ls"; docker network ls || true; echo "::endgroup::"
           echo "::group::/var/run/docker.sock"; ls -la /var/run/docker.sock || true; echo "::endgroup::"
-          echo "::group::Build + inspect image manually"
+          echo "::group::Sanity-check -P with a known-good image (nginx)"
+          docker pull nginx:alpine
+          NID=$(docker run -d -P nginx:alpine)
+          sleep 1
+          echo "--- nginx state ---"
+          docker inspect "$NID" --format 'Running={{.State.Running}} Status={{.State.Status}} ExitCode={{.State.ExitCode}}'
+          echo "--- nginx NetworkSettings.Ports ---"
+          docker inspect "$NID" --format '{{json .NetworkSettings.Ports}}'
+          echo "--- docker port ---"
+          docker port "$NID" || true
+          docker rm -f "$NID" >/dev/null
+          echo "::endgroup::"
+          echo "::group::Build + inspect taskcluster image"
           docker build --tag diag/taskcluster:test --file Dockerfile . || true
           docker image inspect diag/taskcluster:test \
             --format '{{json .Config.ExposedPorts}}' || true
-          echo "--- full Config ---"
-          docker image inspect diag/taskcluster:test \
-            --format '{{json .Config}}' || true
-          echo "--- run + inspect host port mapping ---"
+          echo "--- run + check whether it stays up ---"
           CID=$(docker run -d -P diag/taskcluster:test) || true
+          sleep 2
+          echo "--- taskcluster state ---"
+          docker inspect "$CID" --format 'Running={{.State.Running}} Status={{.State.Status}} ExitCode={{.State.ExitCode}}' || true
+          echo "--- taskcluster NetworkSettings.Ports ---"
           docker inspect "$CID" --format '{{json .NetworkSettings.Ports}}' || true
-          docker rm -f "$CID" || true
-          docker rmi diag/taskcluster:test || true
+          echo "--- docker port ---"
+          docker port "$CID" || true
+          echo "--- last 50 lines of container logs ---"
+          docker logs --tail 50 "$CID" 2>&1 || true
+          docker rm -f "$CID" >/dev/null || true
+          docker rmi diag/taskcluster:test >/dev/null || true
           echo "::endgroup::"
       - name: Build
         run: swift build -c release -Xswiftc -strict-concurrency=complete
