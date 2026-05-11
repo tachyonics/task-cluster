@@ -1,0 +1,13 @@
+{
+  "_comment_aws_cdk_pin": "aws-cdk is pinned below 2.1114.0 because cdklocal requires legacy internal exports (lib/cdk-toolkit, lib/serialize, etc.) that aws-cdk removed in 2.1114.0. See https://github.com/localstack/aws-cdk-local/issues/126. Unpin once cdklocal ships a fix.",
+  "name": "task-cluster-cdk",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "aws-cdk-lib": "^2.140.0",
+    "constructs": "^10.0.0"
+  },
+  "devDependencies": {
+    "aws-cdk": "2.1113.0"
+  }
+}

@@ -9,13 +9,21 @@ let package = Package(
         .macOS(.v15)
     ],
     dependencies: [
-        .package(url: "https://github.com/swift-server-community/dynamo-db-tables", from: "1.0.0-rc.2"),
+        .package(
+            url: "https://github.com/swift-server-community/dynamo-db-tables",
+            from: "1.0.0-rc.2",
+            traits: ["SOTOSDK"]
+        ),
         .package(url: "https://github.com/apple/swift-openapi-generator", from: "1.6.0"),
         .package(url: "https://github.com/apple/swift-openapi-runtime", from: "1.7.0"),
         .package(url: "https://github.com/swift-server/swift-openapi-hummingbird", from: "2.0.1"),
         .package(url: "https://github.com/hummingbird-project/hummingbird", from: "2.0.0"),
         .package(url: "https://github.com/tachyonics/smockable", from: "1.0.0-rc.3"),
         .package(url: "https://github.com/apple/swift-configuration", from: "1.1.0"),
+        .package(url: "https://github.com/tachyonics/swift-local-containers", from: "0.9.2"),
+        .package(url: "https://github.com/swift-server/async-http-client", from: "1.24.0"),
+        .package(url: "https://github.com/soto-project/soto", from: "7.0.0"),
+        .package(url: "https://github.com/soto-project/soto-core", from: "7.0.0"),
     ],
     targets: [
         .target(
@@ -53,8 +61,11 @@ let package = Package(
                 "TaskClusterApp",
                 "TaskClusterDynamoDBModel",
                 .product(name: "DynamoDBTables", package: "dynamo-db-tables"),
+                .product(name: "DynamoDBTablesSoto", package: "dynamo-db-tables"),
                 .product(name: "Configuration", package: "swift-configuration"),
                 .product(name: "Hummingbird", package: "hummingbird"),
+                .product(name: "SotoCore", package: "soto-core"),
+                .product(name: "SotoDynamoDB", package: "soto"),
             ]
         ),
         .testTarget(
@@ -73,6 +84,17 @@ let package = Package(
                 "TaskClusterDynamoDBModel",
                 "TaskClusterModel",
                 .product(name: "DynamoDBTables", package: "dynamo-db-tables"),
+            ]
+        ),
+        .testTarget(
+            name: "TaskClusterIntegrationTests",
+            dependencies: [
+                .product(name: "ContainerMacrosLib", package: "swift-local-containers"),
+                .product(name: "ContainerTestSupport", package: "swift-local-containers"),
+                .product(name: "AsyncHTTPClient", package: "async-http-client"),
+            ],
+            plugins: [
+                .plugin(name: "ContainerCodeGen", package: "swift-local-containers")
             ]
         ),
     ]
