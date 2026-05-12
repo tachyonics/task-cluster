@@ -1,5 +1,5 @@
 {
-  "originHash" : "ea9b22f42cda7be0f23eb4c3f5d74f5e3808a0e4bda90846d5f271cf931f711c",
+  "originHash" : "b6788ac7c8919ee526906c61d8b8e1eddd33ad175e3ce7f2501be96b556abd54",
   "pins" : [
     {
       "identity" : "async-http-client",
@@ -222,8 +222,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/tachyonics/swift-local-containers",
       "state" : {
-        "revision" : "ba41350e345b9efad50c5b94f1c624e3bacaa96a",
-        "version" : "0.9.2"
+        "branch" : "main",
+        "revision" : "762c100eee5f41dc705da55f81f359910dded8c2"
       }
     },
     {

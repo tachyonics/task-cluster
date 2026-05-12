@@ -20,7 +20,7 @@ let package = Package(
         .package(url: "https://github.com/hummingbird-project/hummingbird", from: "2.0.0"),
         .package(url: "https://github.com/tachyonics/smockable", from: "1.0.0-rc.3"),
         .package(url: "https://github.com/apple/swift-configuration", from: "1.1.0"),
-        .package(url: "https://github.com/tachyonics/swift-local-containers", from: "0.9.2"),
+        .package(url: "https://github.com/tachyonics/swift-local-containers", branch: "main"),
         .package(url: "https://github.com/swift-server/async-http-client", from: "1.24.0"),
         .package(url: "https://github.com/soto-project/soto", from: "7.0.0"),
         .package(url: "https://github.com/soto-project/soto-core", from: "7.0.0"),
