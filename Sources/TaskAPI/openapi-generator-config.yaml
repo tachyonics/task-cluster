@@ -1,6 +1,7 @@
 generate:
   - types
   - server
+  - client
 accessModifier: package
 filter:
   tags:

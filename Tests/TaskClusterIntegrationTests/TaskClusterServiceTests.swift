@@ -1,8 +1,8 @@
-import AsyncHTTPClient
 import ContainerMacrosLib
 import ContainerTestSupport
 import Foundation
-import NIOCore
+import OpenAPIRuntime
+import TaskAPI
 import Testing
 
 @Containers
@@ -19,6 +19,13 @@ struct TaskClusterContainers {
     var taskCluster: ServiceEndpoint
 }
 
+/// Smoke test for the wiring: build → container start → OpenAPI client →
+/// in-memory `DynamoDBCompositePrimaryKeyTable` fallback (no LocalStack).
+///
+/// Persistence-shape coverage and per-endpoint behavior live in
+/// `TaskClusterLocalStackIntegrationTests`. This suite exists to catch
+/// "service doesn't start" / "OpenAPI contract drifted" regressions without
+/// paying the LocalStack startup cost.
 @Suite(
     TaskClusterContainers.containerTrait,
     .tags(.integration),
@@ -27,55 +34,19 @@ struct TaskClusterContainers {
 struct TaskClusterIntegrationTests {
     let containers = TaskClusterContainers()
 
-    @Test("Round-trips a task through the running service")
+    @Test("Round-trips a task through the running service via the OpenAPI client")
     func createAndGet() async throws {
-        let baseURL = containers.taskCluster.baseURL  // e.g. "http://127.0.0.1:54321"
+        let client = try makeTaskAPIClient(baseURL: containers.taskCluster.baseURL)
 
-        var createRequest = HTTPClientRequest(url: "\(baseURL)/task")
-        createRequest.method = .POST
-        createRequest.headers.add(name: "content-type", value: "application/json")
-        createRequest.body = .bytes(
-            Data(#"{"title":"build the thing","priority":1}"#.utf8)
+        let createResponse = try await client.createTask(
+            body: .json(.init(title: "build the thing", priority: 1))
         )
+        let created = try createResponse.created.body.json
 
-        let createResponse = try await HTTPClient.shared.execute(
-            createRequest,
-            timeout: .seconds(10)
-        )
-        #expect(createResponse.status == .created)
-
-        let createdBody = try await createResponse.body.collect(upTo: 1024 * 1024)
-        let created = try JSONDecoder.iso8601.decode(WireTask.self, from: createdBody)
-
-        var getRequest = HTTPClientRequest(url: "\(baseURL)/task/\(created.taskId)")
-        getRequest.method = .GET
-        let getResponse = try await HTTPClient.shared.execute(
-            getRequest,
-            timeout: .seconds(10)
-        )
-        #expect(getResponse.status == .ok)
-
-        let fetchedBody = try await getResponse.body.collect(upTo: 1024 * 1024)
-        let fetched = try JSONDecoder.iso8601.decode(WireTask.self, from: fetchedBody)
+        let getResponse = try await client.getTask(path: .init(taskId: created.taskId))
+        let fetched = try getResponse.ok.body.json
         #expect(fetched.taskId == created.taskId)
         #expect(fetched.title == "build the thing")
-        #expect(fetched.status == "pending")
-    }
-}
-
-private struct WireTask: Codable {
-    let taskId: UUID
-    let title: String
-    let priority: Int
-    let status: String
-    let createdAt: Date
-    let updatedAt: Date
-}
-
-extension JSONDecoder {
-    fileprivate static var iso8601: JSONDecoder {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        return decoder
+        #expect(fetched.status == .pending)
     }
 }

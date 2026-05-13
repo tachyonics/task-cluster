@@ -1,5 +1,5 @@
 {
-  "originHash" : "b6788ac7c8919ee526906c61d8b8e1eddd33ad175e3ce7f2501be96b556abd54",
+  "originHash" : "a86ba2b0be9dc14037632028e64733e8cf48531c81efa770edf3d23d8d160d93",
   "pins" : [
     {
       "identity" : "async-http-client",
@@ -296,6 +296,15 @@
       "state" : {
         "revision" : "0c0290ff6b24942dadb83a929ffaaa1481df04a2",
         "version" : "1.1.1"
+      }
+    },
+    {
+      "identity" : "swift-openapi-async-http-client",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/swift-server/swift-openapi-async-http-client",
+      "state" : {
+        "revision" : "3681f659d9417652b8119f0adbdf57c04b6cb292",
+        "version" : "1.5.0"
       }
     },
     {

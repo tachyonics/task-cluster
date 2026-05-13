@@ -17,6 +17,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-openapi-generator", from: "1.6.0"),
         .package(url: "https://github.com/apple/swift-openapi-runtime", from: "1.7.0"),
         .package(url: "https://github.com/swift-server/swift-openapi-hummingbird", from: "2.0.1"),
+        .package(url: "https://github.com/swift-server/swift-openapi-async-http-client", from: "1.1.0"),
         .package(url: "https://github.com/hummingbird-project/hummingbird", from: "2.0.0"),
         .package(url: "https://github.com/tachyonics/smockable", from: "1.0.0-rc.3"),
         .package(url: "https://github.com/apple/swift-configuration", from: "1.1.0"),
@@ -89,9 +90,17 @@ let package = Package(
         .testTarget(
             name: "TaskClusterIntegrationTests",
             dependencies: [
+                "TaskAPI",
+                "TaskClusterModel",
                 .product(name: "ContainerMacrosLib", package: "swift-local-containers"),
                 .product(name: "ContainerTestSupport", package: "swift-local-containers"),
                 .product(name: "AsyncHTTPClient", package: "async-http-client"),
+                .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
+                .product(name: "OpenAPIAsyncHTTPClient", package: "swift-openapi-async-http-client"),
+                .product(name: "DynamoDBTables", package: "dynamo-db-tables"),
+                .product(name: "DynamoDBTablesSoto", package: "dynamo-db-tables"),
+                .product(name: "SotoCore", package: "soto-core"),
+                .product(name: "SotoDynamoDB", package: "soto"),
             ],
             plugins: [
                 .plugin(name: "ContainerCodeGen", package: "swift-local-containers")
