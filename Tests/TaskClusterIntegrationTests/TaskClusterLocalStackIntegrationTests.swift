@@ -2,7 +2,6 @@ import ContainerMacrosLib
 import ContainerTestSupport
 import DynamoDBTablesSoto
 import Foundation
-import OpenAPIRuntime
 import TaskAPI
 import TaskClusterModel
 import Testing
