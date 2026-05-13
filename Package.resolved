@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/containerization.git",
       "state" : {
-        "revision" : "c519d5760970ac1da99a2816289d326e2525e9f6",
-        "version" : "0.32.0"
+        "revision" : "f8a18e8dcd965eefcfe65ead986405533c7e3872",
+        "version" : "0.32.1"
       }
     },
     {
@@ -33,8 +33,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/grpc/grpc-swift-2.git",
       "state" : {
-        "revision" : "d19a94824cc6fa182211e8197ce391ff712b69f1",
-        "version" : "2.4.0"
+        "revision" : "21fe69ab7ce0e87ac089534733c52f037e74a3eb",
+        "version" : "2.4.1"
       }
     },
     {
@@ -78,8 +78,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/mattpolzin/OpenAPIKit",
       "state" : {
-        "revision" : "343b2c1793058fcc53c1bd7e2907f8e3a4d640fb",
-        "version" : "3.9.0"
+        "revision" : "c42c0ea6d62f384da4e023ab298b15a79d6899b6",
+        "version" : "6.1.0"
       }
     },
     {
@@ -223,7 +223,7 @@
       "location" : "https://github.com/tachyonics/swift-local-containers",
       "state" : {
         "branch" : "main",
-        "revision" : "762c100eee5f41dc705da55f81f359910dded8c2"
+        "revision" : "28ed2f1f5df64734ae0faa0198652fb96775c43d"
       }
     },
     {
@@ -303,8 +303,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-openapi-generator",
       "state" : {
-        "revision" : "83e8301d6d62c423f8e11d6fcb0c8276d4dbb032",
-        "version" : "1.12.0"
+        "revision" : "5dd0da1c7da7bac8f0c458a02a76f69031137a80",
+        "version" : "1.12.1"
       }
     },
     {

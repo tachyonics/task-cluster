@@ -25,6 +25,7 @@ struct TaskClusterWithDDBContainers {
 
     @DockerfileContainer(
         waitStrategy: .httpGet(path: "/health"),
+        containerLogLevel: .info,
         environment: { (containers: TaskClusterWithDDBContainers) in
             [
                 "TASK_TABLE_NAME": containers.aws.tableName,

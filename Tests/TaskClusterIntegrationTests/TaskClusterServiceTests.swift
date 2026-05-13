@@ -13,7 +13,8 @@ struct TaskClusterContainers {
     /// to dynamic host ports. The trait polls `GET /health` on the resolved host
     /// port until it returns 200 before handing control to the test.
     @DockerfileContainer(
-        waitStrategy: .httpGet(path: "/health")
+        waitStrategy: .httpGet(path: "/health"),
+        containerLogLevel: .info 
     )
     var taskCluster: ServiceEndpoint
 }
