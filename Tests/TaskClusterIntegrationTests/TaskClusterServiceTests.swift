@@ -14,7 +14,7 @@ struct TaskClusterContainers {
     /// port until it returns 200 before handing control to the test.
     @DockerfileContainer(
         waitStrategy: .httpGet(path: "/health"),
-        containerLogLevel: .info 
+        containerLogLevel: .info
     )
     var taskCluster: ServiceEndpoint
 }
