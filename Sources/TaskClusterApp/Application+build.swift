@@ -1,8 +1,7 @@
 import Hummingbird
 import Logging
-import OpenAPIHummingbird
+import OpenAPIHummingbird  // swiftlint:disable:this unused_import
 import TaskAPI
-import TaskClusterModel
 
 package func buildApplication(
     controller: some APIProtocol,
