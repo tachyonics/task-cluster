@@ -1,16 +1,19 @@
 import DynamoDBTables
 import Foundation
 import TaskClusterModel
+import Wire
 
 package enum TaskRepositoryError: Error {
     case notFound
 }
 
+@Singleton
 package struct DynamoDBTaskRepository<Table: DynamoDBCompositePrimaryKeyTable & Sendable>: TaskRepository {
     package typealias TaskDatabaseItem = StandardTypedDatabaseItem<TaskItem>
 
     private let table: Table
 
+    @Inject
     package init(table: Table) {
         self.table = table
     }

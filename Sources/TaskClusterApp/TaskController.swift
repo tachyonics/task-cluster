@@ -1,9 +1,16 @@
 import Foundation
 import TaskAPI
 import TaskClusterModel
+import Wire
 
+@Singleton
 package struct TaskController<Repository: TaskRepository>: APIProtocol {
-    var repository: Repository
+    private let repository: Repository
+
+    @Inject
+    package init(repository: Repository) {
+        self.repository = repository
+    }
 
     package func createTask(_ input: Operations.createTask.Input) async throws -> Operations.createTask.Output {
         let body =

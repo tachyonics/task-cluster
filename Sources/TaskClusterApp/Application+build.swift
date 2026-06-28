@@ -1,10 +1,11 @@
 import Hummingbird
 import Logging
-import OpenAPIHummingbird  // swiftlint:disable:this unused_import
+import OpenAPIHummingbird
+import TaskAPI
 import TaskClusterModel
 
-package func buildApplication<Repository: TaskRepository>(
-    repository: Repository,
+package func buildApplication(
+    controller: some APIProtocol,
     configuration: ApplicationConfiguration,
     logger: Logger
 ) throws -> some ApplicationProtocol {
@@ -18,7 +19,6 @@ package func buildApplication<Repository: TaskRepository>(
         HTTPResponse.Status.ok
     }
 
-    let controller = TaskController(repository: repository)
     try controller.registerHandlers(on: router)
 
     return Application(router: router, configuration: configuration, logger: logger)

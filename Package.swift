@@ -27,6 +27,7 @@ let package = Package(
             dependencies: [
                 "TaskClusterModel",
                 .product(name: "DynamoDBTables", package: "dynamo-db-tables"),
+                .product(name: "Wire", package: "swift-wire"),
             ]
         ),
         .target(
@@ -46,6 +47,7 @@ let package = Package(
                 .product(name: "Hummingbird", package: "hummingbird"),
                 .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
                 .product(name: "OpenAPIHummingbird", package: "swift-openapi-hummingbird"),
+                .product(name: "Wire", package: "swift-wire"),
             ]
         ),
         .executableTarget(

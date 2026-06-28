@@ -1,7 +1,6 @@
 import Configuration
 import Hummingbird
 import TaskClusterApp
-import TaskClusterDynamoDBModel
 
 @main
 struct TaskCluster {
@@ -10,13 +9,12 @@ struct TaskCluster {
         let config = ConfigReader(provider: EnvironmentVariablesProvider())
         let port = config.int(forKey: "HTTP_PORT", default: 8080)
 
-        let repository = DynamoDBTaskRepository(table: graph.inMemoryDynamoDBCompositePrimaryKeyTable)
         let configuration = ApplicationConfiguration(
             address: .hostname("0.0.0.0", port: port)
         )
 
         let application = try buildApplication(
-            repository: repository,
+            controller: graph.compositionRoot.controller,
             configuration: configuration,
             logger: graph.logger
         )

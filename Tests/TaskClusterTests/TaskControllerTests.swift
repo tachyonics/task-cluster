@@ -37,7 +37,7 @@ struct TaskControllerTests {
         let mock = MockTestTaskRepository(expectations: expectations)
 
         let app = try buildApplication(
-            repository: mock,
+            controller: TaskController(repository: mock),
             configuration: .init(),
             logger: Logger(label: "test")
         )
@@ -66,7 +66,7 @@ struct TaskControllerTests {
         let mock = MockTestTaskRepository(expectations: expectations)
 
         let app = try buildApplication(
-            repository: mock,
+            controller: TaskController(repository: mock),
             configuration: .init(),
             logger: Logger(label: "test")
         )
@@ -87,7 +87,7 @@ struct TaskControllerTests {
         let mock = MockTestTaskRepository(expectations: expectations)
 
         let app = try buildApplication(
-            repository: mock,
+            controller: TaskController(repository: mock),
             configuration: .init(),
             logger: Logger(label: "test")
         )
@@ -121,7 +121,7 @@ struct TaskControllerTests {
         let mock = MockTestTaskRepository(expectations: expectations)
 
         let app = try buildApplication(
-            repository: mock,
+            controller: TaskController(repository: mock),
             configuration: .init(),
             logger: Logger(label: "test")
         )
@@ -150,7 +150,7 @@ struct TaskControllerTests {
         let mock = MockTestTaskRepository(expectations: expectations)
 
         let app = try buildApplication(
-            repository: mock,
+            controller: TaskController(repository: mock),
             configuration: .init(),
             logger: Logger(label: "test")
         )
