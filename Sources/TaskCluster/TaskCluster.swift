@@ -13,10 +13,11 @@ struct TaskCluster {
             address: .hostname("0.0.0.0", port: port)
         )
 
-        // The controller is a graph node under its opaque identity
-        // (`some APIProtocol`) — read it directly and hand it to the framework.
+        // The controller is a graph node under its structural identity
+        // (`TaskController<some TaskRepository>`) — read it directly and hand it
+        // to the framework, which takes it as `some APIProtocol`.
         let application = try buildApplication(
-            controller: graph.someAPIProtocol,
+            controller: graph.taskControllerOfSomeTaskRepository,
             configuration: configuration,
             logger: graph.logger
         )

@@ -12,10 +12,11 @@ enum ApplicationWiring {
     static let logger = Logger(label: "TaskCluster")
 
     // The composition-root leaf: the single concrete choice, hidden behind an
-    // opaque identity so the `@Singleton(as:)` chain resolves by identity
-    // (`some TaskRepository`, `some APIProtocol`) without spelling the nested
-    // concrete stack. `InMemoryDynamoDBCompositePrimaryKeyTable` is named once,
-    // here; the `& Sendable` matches the repository's `Table` constraint.
+    // opaque identity so the constrained-parameter chain resolves by identity
+    // (`some TaskRepository` for the repo; the controller keeps its real
+    // `TaskController<some TaskRepository>`) without spelling the nested concrete
+    // stack. `InMemoryDynamoDBCompositePrimaryKeyTable` is named once, here; the
+    // `& Sendable` matches the repository's `Table` constraint.
     @Provides
     static let table: some DynamoDBCompositePrimaryKeyTable & Sendable = InMemoryDynamoDBCompositePrimaryKeyTable()
 }

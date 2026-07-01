@@ -3,7 +3,7 @@ import TaskAPI
 import TaskClusterModel
 import Wire
 
-@Singleton(as: APIProtocol.self)
+@Singleton
 package struct TaskController<Repository: TaskRepository>: APIProtocol {
     private let repository: Repository
 
