@@ -7,7 +7,7 @@ package enum TaskRepositoryError: Error {
     case notFound
 }
 
-@Singleton
+@Singleton(as: TaskRepository.self)
 package struct DynamoDBTaskRepository<Table: DynamoDBCompositePrimaryKeyTable & Sendable>: TaskRepository {
     package typealias TaskDatabaseItem = StandardTypedDatabaseItem<TaskItem>
 

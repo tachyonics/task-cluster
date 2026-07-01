@@ -11,17 +11,11 @@ enum ApplicationWiring {
     @Provides(allowUnused: true)
     static let logger = Logger(label: "TaskCluster")
 
+    // The composition-root leaf: the single concrete choice, hidden behind an
+    // opaque identity so the `@Singleton(as:)` chain resolves by identity
+    // (`some TaskRepository`, `some APIProtocol`) without spelling the nested
+    // concrete stack. `InMemoryDynamoDBCompositePrimaryKeyTable` is named once,
+    // here; the `& Sendable` matches the repository's `Table` constraint.
     @Provides
-    static let table = InMemoryDynamoDBCompositePrimaryKeyTable()
-}
-
-/// The composition root. Spelling the fully-concrete controller type here
-/// is the single place that pins the implementation stack — Wire's
-/// specialisation phase walks it down the chain (`TaskController` ->
-/// `DynamoDBTaskRepository` -> `InMemoryDynamoDBCompositePrimaryKeyTable`),
-/// constructing each generic `@Singleton` from the activated library
-/// targets and resolving the table against `ApplicationWiring.table`.
-@Singleton(allowUnused: true)
-struct CompositionRoot {
-    @Inject var controller: TaskController<DynamoDBTaskRepository<InMemoryDynamoDBCompositePrimaryKeyTable>>
+    static let table: some DynamoDBCompositePrimaryKeyTable & Sendable = InMemoryDynamoDBCompositePrimaryKeyTable()
 }
