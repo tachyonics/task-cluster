@@ -1,7 +1,5 @@
 import DynamoDBTables
 import Logging
-import TaskClusterApp
-import TaskClusterDynamoDBModel
 import Wire
 
 enum ApplicationWiring {
