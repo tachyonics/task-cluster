@@ -16,6 +16,7 @@ let package = Package(
         .package(url: "https://github.com/hummingbird-project/hummingbird", from: "2.0.0"),
         .package(url: "https://github.com/tachyonics/smockable", from: "1.0.0-rc.3"),
         .package(url: "https://github.com/apple/swift-configuration", from: "1.1.0"),
+        .package(url: "https://github.com/tachyonics/swift-wire", branch: "main"),
     ],
     targets: [
         .target(
@@ -26,6 +27,7 @@ let package = Package(
             dependencies: [
                 "TaskClusterModel",
                 .product(name: "DynamoDBTables", package: "dynamo-db-tables"),
+                .product(name: "Wire", package: "swift-wire"),
             ]
         ),
         .target(
@@ -45,6 +47,7 @@ let package = Package(
                 .product(name: "Hummingbird", package: "hummingbird"),
                 .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
                 .product(name: "OpenAPIHummingbird", package: "swift-openapi-hummingbird"),
+                .product(name: "Wire", package: "swift-wire"),
             ]
         ),
         .executableTarget(
@@ -55,7 +58,9 @@ let package = Package(
                 .product(name: "DynamoDBTables", package: "dynamo-db-tables"),
                 .product(name: "Configuration", package: "swift-configuration"),
                 .product(name: "Hummingbird", package: "hummingbird"),
-            ]
+                .product(name: "Wire", package: "swift-wire"),
+            ],
+            plugins: [.plugin(name: "WireBuildPlugin", package: "swift-wire")]
         ),
         .testTarget(
             name: "TaskClusterTests",

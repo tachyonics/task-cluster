@@ -1,27 +1,25 @@
 import Configuration
-import DynamoDBTables
 import Hummingbird
-import Logging
 import TaskClusterApp
-import TaskClusterDynamoDBModel
 
 @main
 struct TaskCluster {
     static func main() async throws {
+        let graph = try await _Wire.bootstrap()
         let config = ConfigReader(provider: EnvironmentVariablesProvider())
         let port = config.int(forKey: "HTTP_PORT", default: 8080)
 
-        let logger = Logger(label: "TaskCluster")
-        let table = InMemoryDynamoDBCompositePrimaryKeyTable()
-        let repository = DynamoDBTaskRepository(table: table)
         let configuration = ApplicationConfiguration(
             address: .hostname("0.0.0.0", port: port)
         )
 
+        // The controller is a graph node under its structural identity
+        // (`TaskController<some TaskRepository>`) — read it directly and hand it
+        // to the framework, which takes it as `some APIProtocol`.
         let application = try buildApplication(
-            repository: repository,
+            controller: graph.taskControllerOfSomeTaskRepository,
             configuration: configuration,
-            logger: logger
+            logger: graph.logger
         )
         try await application.run()
     }
