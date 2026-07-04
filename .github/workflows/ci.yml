@@ -26,21 +26,6 @@ jobs:
           chmod +x /usr/local/bin/swiftlint
       - name: Analyze unused imports
         run: swiftlint analyze --strict --quiet --compiler-log-path build.log
-  BuildMacOS:
-    # Experiment: reproduce the wire-hummingbird macOS failure on a known-good
-    # project. macOS runners can't use the Linux swift Docker image, so this uses
-    # setup-swift on a bare macos-15 runner. If this fails to build (swift-configuration
-    # / Darwin Foundation), the failure is upstream, not wire-hummingbird-specific.
-    runs-on: macos-15
-    steps:
-      - uses: actions/checkout@v7
-      - uses: SwiftyLab/setup-swift@v1
-        with:
-          swift-version: "6.3.3"
-      - name: Build
-        run: swift build -c release -Xswiftc -strict-concurrency=complete
-      - name: Run tests
-        run: swift test
   SwiftLint:
     runs-on: ubuntu-latest
     steps:
