@@ -17,6 +17,7 @@ let package = Package(
         .package(url: "https://github.com/tachyonics/smockable", from: "1.0.0-rc.3"),
         .package(url: "https://github.com/apple/swift-configuration", from: "1.1.0"),
         .package(url: "https://github.com/tachyonics/swift-wire", branch: "main"),
+        .package(url: "https://github.com/tachyonics/wire-open-api", branch: "main"),
     ],
     targets: [
         .target(
@@ -48,6 +49,7 @@ let package = Package(
                 .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
                 .product(name: "OpenAPIHummingbird", package: "swift-openapi-hummingbird"),
                 .product(name: "Wire", package: "swift-wire"),
+                .product(name: "WireOpenAPI", package: "wire-open-api"),
             ]
         ),
         .executableTarget(
@@ -59,6 +61,7 @@ let package = Package(
                 .product(name: "Configuration", package: "swift-configuration"),
                 .product(name: "Hummingbird", package: "hummingbird"),
                 .product(name: "Wire", package: "swift-wire"),
+                .product(name: "WireOpenAPI", package: "wire-open-api"),
             ],
             plugins: [.plugin(name: "WireBuildPlugin", package: "swift-wire")]
         ),
@@ -70,6 +73,7 @@ let package = Package(
                 .product(name: "Smockable", package: "smockable"),
                 .product(name: "Hummingbird", package: "hummingbird"),
                 .product(name: "HummingbirdTesting", package: "hummingbird"),
+                .product(name: "WireOpenAPI", package: "wire-open-api"),
             ]
         ),
         .testTarget(

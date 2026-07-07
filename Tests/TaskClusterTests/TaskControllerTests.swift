@@ -4,9 +4,16 @@ import HummingbirdTesting
 import Logging
 import Smockable
 import Testing
+import WireOpenAPI
 
 @testable import TaskClusterApp
 @testable import TaskClusterModel
+
+/// A minimal `TransportComposable` for tests — wraps a mock-backed controller so
+/// `buildApplication` exercises the real `WireOpenAPI.apply` path.
+private struct TestGraph: TransportComposable {
+    let handlers: [any TransportContributor]
+}
 
 @Suite("TaskController Tests")
 struct TaskControllerTests {
@@ -37,7 +44,7 @@ struct TaskControllerTests {
         let mock = MockTestTaskRepository(expectations: expectations)
 
         let app = try buildApplication(
-            controller: TaskController(repository: mock),
+            graph: TestGraph(handlers: [TaskController(repository: mock)]),
             configuration: .init(),
             logger: Logger(label: "test")
         )
@@ -66,7 +73,7 @@ struct TaskControllerTests {
         let mock = MockTestTaskRepository(expectations: expectations)
 
         let app = try buildApplication(
-            controller: TaskController(repository: mock),
+            graph: TestGraph(handlers: [TaskController(repository: mock)]),
             configuration: .init(),
             logger: Logger(label: "test")
         )
@@ -87,7 +94,7 @@ struct TaskControllerTests {
         let mock = MockTestTaskRepository(expectations: expectations)
 
         let app = try buildApplication(
-            controller: TaskController(repository: mock),
+            graph: TestGraph(handlers: [TaskController(repository: mock)]),
             configuration: .init(),
             logger: Logger(label: "test")
         )
@@ -121,7 +128,7 @@ struct TaskControllerTests {
         let mock = MockTestTaskRepository(expectations: expectations)
 
         let app = try buildApplication(
-            controller: TaskController(repository: mock),
+            graph: TestGraph(handlers: [TaskController(repository: mock)]),
             configuration: .init(),
             logger: Logger(label: "test")
         )
@@ -150,7 +157,7 @@ struct TaskControllerTests {
         let mock = MockTestTaskRepository(expectations: expectations)
 
         let app = try buildApplication(
-            controller: TaskController(repository: mock),
+            graph: TestGraph(handlers: [TaskController(repository: mock)]),
             configuration: .init(),
             logger: Logger(label: "test")
         )

@@ -1,9 +1,14 @@
 import Foundation
+// Used by @OpenAPIController's generated witness (ServerTransport, registerHandlers), which the
+// unused_import analyzer doesn't see.
+import OpenAPIRuntime  // swiftlint:disable:this unused_import
 import TaskAPI
 import TaskClusterModel
 import Wire
+import WireOpenAPI
 
 @Singleton
+@OpenAPIController
 package struct TaskController<Repository: TaskRepository>: APIProtocol {
     private let repository: Repository
 

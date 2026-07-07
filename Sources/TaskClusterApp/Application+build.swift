@@ -1,10 +1,10 @@
 import Hummingbird
 import Logging
 import OpenAPIHummingbird  // swiftlint:disable:this unused_import
-import TaskAPI
+import WireOpenAPI
 
 package func buildApplication(
-    controller: some APIProtocol,
+    graph: some TransportComposable,
     configuration: ApplicationConfiguration,
     logger: Logger
 ) throws -> some ApplicationProtocol {
@@ -18,7 +18,7 @@ package func buildApplication(
         HTTPResponse.Status.ok
     }
 
-    try controller.registerHandlers(on: router)
+    try WireOpenAPI.apply(graph, to: router)
 
     return Application(router: router, configuration: configuration, logger: logger)
 }
