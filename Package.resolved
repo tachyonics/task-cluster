@@ -1,5 +1,5 @@
 {
-  "originHash" : "418a280701b15cbf44640cff19a6bc328dda2c91fe099305d04f8b0d01236c90",
+  "originHash" : "65e7917837eb58cd969fbe6cb77a4c84e753d8b5be4bd73c860f4a9912fed83c",
   "pins" : [
     {
       "identity" : "async-http-client",
@@ -322,7 +322,16 @@
       "location" : "https://github.com/tachyonics/swift-wire",
       "state" : {
         "branch" : "main",
-        "revision" : "31b2c5ce208941a749c4defdcfe7d1ae3bc10498"
+        "revision" : "12ee6e15969083b55c6c8803d416cb0f682e62a6"
+      }
+    },
+    {
+      "identity" : "wire-hummingbird",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/tachyonics/wire-hummingbird",
+      "state" : {
+        "branch" : "main",
+        "revision" : "ea9d2aa25290218496cd48cd71db72b200f70a52"
       }
     },
     {

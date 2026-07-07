@@ -4,15 +4,18 @@ import HummingbirdTesting
 import Logging
 import Smockable
 import Testing
+import Wire
 import WireOpenAPI
 
 @testable import TaskClusterApp
 @testable import TaskClusterModel
 
-/// A minimal `TransportComposable` for tests — wraps a mock-backed controller so
-/// `buildApplication` exercises the real `WireOpenAPI.apply` path.
-private struct TestGraph: TransportComposable {
+/// A minimal graph for tests — wraps a mock-backed controller so `buildApplication`
+/// exercises the real `WireOpenAPI.apply` path. Conforms to `Introspectable` with an
+/// empty model (these tests exercise the HTTP layer, not introspection).
+private struct TestGraph: TransportComposable, Introspectable {
     let handlers: [any TransportContributor]
+    func introspect() -> WiringModel { WiringModel(bindings: []) }
 }
 
 @Suite("TaskController Tests")

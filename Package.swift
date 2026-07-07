@@ -18,6 +18,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-configuration", from: "1.1.0"),
         .package(url: "https://github.com/tachyonics/swift-wire", branch: "main"),
         .package(url: "https://github.com/tachyonics/wire-open-api", branch: "main"),
+        .package(url: "https://github.com/tachyonics/wire-hummingbird", branch: "main"),
     ],
     targets: [
         .target(
@@ -50,6 +51,7 @@ let package = Package(
                 .product(name: "OpenAPIHummingbird", package: "swift-openapi-hummingbird"),
                 .product(name: "Wire", package: "swift-wire"),
                 .product(name: "WireOpenAPI", package: "wire-open-api"),
+                .product(name: "WireHummingbird", package: "wire-hummingbird"),
             ]
         ),
         .executableTarget(
@@ -62,6 +64,7 @@ let package = Package(
                 .product(name: "Hummingbird", package: "hummingbird"),
                 .product(name: "Wire", package: "swift-wire"),
                 .product(name: "WireOpenAPI", package: "wire-open-api"),
+                .product(name: "WireHummingbird", package: "wire-hummingbird"),
             ],
             plugins: [.plugin(name: "WireBuildPlugin", package: "swift-wire")]
         ),

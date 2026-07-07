@@ -14,7 +14,8 @@ struct TaskCluster {
         )
 
         // Controllers collate into the graph's `TransportComposable` surface; the
-        // adapter registers each onto the router's `ServerTransport`.
+        // adapter registers each onto the router's `ServerTransport`. The graph's
+        // wiring model is served via WireHummingbird's introspection endpoint.
         let application = try buildApplication(
             graph: graph,
             configuration: configuration,
