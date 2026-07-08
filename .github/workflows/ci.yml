@@ -25,9 +25,10 @@ jobs:
       - name: Build
         run: swift build -c release -Xswiftc -strict-concurrency=complete
       - name: Run tests
-        # pipefail so a `swift test` failure propagates through the `tee` (the pipe
-        # otherwise returns tee's exit code, masking test failures); build.log feeds the
-        # unused-import analyzer below.
+        # bash (not the container default `sh`) for pipefail, so a `swift test` failure
+        # propagates through the `tee` instead of being masked by tee's exit code;
+        # build.log feeds the unused-import analyzer below.
+        shell: bash
         run: |
           set -o pipefail
           swift test -v 2>&1 | tee build.log
