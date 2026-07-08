@@ -8,9 +8,14 @@ RUN swift sdk install \
 FROM toolchain AS build
 WORKDIR /workspace
 COPY . .
+# Build the static-musl binary for the image's own architecture (the static SDK bundle
+# ships both x86_64 and aarch64). `uname -m` under BuildKit reflects the target platform —
+# x86_64 on GitHub's amd64 runners, aarch64 on Apple Silicon — so the binary matches the
+# runtime and doesn't hit "exec format error".
 RUN --mount=type=cache,target=/workspace/.build \
-    swift build -c release --swift-sdk aarch64-swift-linux-musl && \
-    cp .build/aarch64-swift-linux-musl/release/TaskCluster /TaskCluster
+    ARCH="$(uname -m)" && \
+    swift build -c release --swift-sdk "${ARCH}-swift-linux-musl" && \
+    cp ".build/${ARCH}-swift-linux-musl/release/TaskCluster" /TaskCluster
 
 FROM scratch AS runtime
 COPY --from=build /TaskCluster /TaskCluster

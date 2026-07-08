@@ -25,7 +25,12 @@ jobs:
       - name: Build
         run: swift build -c release -Xswiftc -strict-concurrency=complete
       - name: Run tests
-        run: swift test -v 2>&1 | tee build.log
+        # pipefail so a `swift test` failure propagates through the `tee` (the pipe
+        # otherwise returns tee's exit code, masking test failures); build.log feeds the
+        # unused-import analyzer below.
+        run: |
+          set -o pipefail
+          swift test -v 2>&1 | tee build.log
       - name: Install SwiftLint
         run: |
           curl -sL https://github.com/realm/SwiftLint/releases/download/0.63.2/swiftlint_linux_amd64.zip -o swiftlint.zip
