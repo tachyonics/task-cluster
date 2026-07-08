@@ -25,6 +25,8 @@ let package = Package(
         .package(url: "https://github.com/tachyonics/swift-wire", branch: "main"),
         .package(url: "https://github.com/tachyonics/wire-open-api", branch: "main"),
         .package(url: "https://github.com/tachyonics/wire-hummingbird", branch: "main"),
+        .package(url: "https://github.com/tachyonics/swift-local-containers", from: "0.9.2"),
+        .package(url: "https://github.com/swift-server/async-http-client", from: "1.24.0"),
     ],
     targets: [
         .target(
@@ -94,6 +96,23 @@ let package = Package(
                 "TaskClusterDynamoDBModel",
                 "TaskClusterModel",
                 .product(name: "DynamoDBTables", package: "dynamo-db-tables"),
+            ]
+        ),
+        // LocalStack integration: builds TaskCluster from the package-root Dockerfile,
+        // stands up a LocalStack DynamoDB (the table codegen'd from
+        // Resources/dynamodb-table.json), and round-trips a task through the running
+        // service against a real table — exercising the live AWS client (and its
+        // @Teardown shutdown when the container stops). Gated on a container runtime +
+        // LocalStack token, so it skips where those aren't available.
+        .testTarget(
+            name: "TaskClusterIntegrationTests",
+            dependencies: [
+                .product(name: "ContainerMacrosLib", package: "swift-local-containers"),
+                .product(name: "ContainerTestSupport", package: "swift-local-containers"),
+                .product(name: "AsyncHTTPClient", package: "async-http-client"),
+            ],
+            plugins: [
+                .plugin(name: "ContainerCodeGen", package: "swift-local-containers")
             ]
         ),
     ]
