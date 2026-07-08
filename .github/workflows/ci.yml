@@ -11,9 +11,16 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: swift:6.3.3
+    # Docker + BuildKit so the LocalStack integration test can build the app image and
+    # run containers; the token comes from a repo secret (the .local-containers/env file
+    # is gitignored). The test skips gracefully where the runtime/token aren't present.
+    env:
+      DOCKER_BUILDKIT: 1
+      COMPOSE_DOCKER_CLI_BUILD: 1
+      LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
     steps:
       - name: Install dependencies
-        run: apt-get update && apt-get install -y curl unzip
+        run: apt-get update && apt-get install -y curl unzip docker.io docker-buildx
       - uses: actions/checkout@v7
       - name: Build
         run: swift build -c release -Xswiftc -strict-concurrency=complete
