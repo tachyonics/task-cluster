@@ -6,7 +6,7 @@ import WireHummingbird
 import WireOpenAPI
 
 package func buildApplication(
-    graph: some TransportComposable & Introspectable,
+    graph: some TransportComposable & Introspectable & Teardownable & Sendable,
     configuration: ApplicationConfiguration,
     logger: Logger
 ) throws -> some ApplicationProtocol {
@@ -25,5 +25,12 @@ package func buildApplication(
     try WireOpenAPI.apply(graph, to: router)
     WireHummingbird.mountIntrospection(graph, on: router.group("wiring"))
 
-    return Application(router: router, configuration: configuration, logger: logger)
+    // Teardown (M4): the graph's `@Teardown` actions (the AWS client `shutdown()`) run at
+    // app-scope shutdown via a service that shuts down last — after the server stops.
+    return Application(
+        router: router,
+        configuration: configuration,
+        services: [WireHummingbird.teardownService(graph, logger: logger)],
+        logger: logger
+    )
 }

@@ -1,5 +1,5 @@
 {
-  "originHash" : "65e7917837eb58cd969fbe6cb77a4c84e753d8b5be4bd73c860f4a9912fed83c",
+  "originHash" : "675ea74c3d703dbe88fce96ce22b644a0526c429cab74139ee5b0e0570614730",
   "pins" : [
     {
       "identity" : "async-http-client",
@@ -8,24 +8,6 @@
       "state" : {
         "revision" : "3a5b74a58782c3b4c1f0bc75e9b67b10c2494e8f",
         "version" : "1.33.1"
-      }
-    },
-    {
-      "identity" : "aws-crt-swift",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/awslabs/aws-crt-swift",
-      "state" : {
-        "revision" : "d754d289d594adc240f55c90eab212bac818509c",
-        "version" : "0.58.1"
-      }
-    },
-    {
-      "identity" : "aws-sdk-swift",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/awslabs/aws-sdk-swift.git",
-      "state" : {
-        "revision" : "cff67986b2be6af3a8119bae3cfa391e7233b28e",
-        "version" : "1.6.110"
       }
     },
     {
@@ -47,6 +29,15 @@
       }
     },
     {
+      "identity" : "jmespath.swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/jmespath/jmespath.swift.git",
+      "state" : {
+        "revision" : "3877a5060e85ae33e3b9fe51ab581784f65ec80e",
+        "version" : "1.0.3"
+      }
+    },
+    {
       "identity" : "openapikit",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/mattpolzin/OpenAPIKit",
@@ -56,21 +47,30 @@
       }
     },
     {
-      "identity" : "smithy-swift",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/smithy-lang/smithy-swift",
-      "state" : {
-        "revision" : "3df71b8c33b21b9a76071c915504a8dfda663c33",
-        "version" : "0.203.0"
-      }
-    },
-    {
       "identity" : "smockable",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/tachyonics/smockable",
       "state" : {
         "revision" : "b4702a692745bd24ce3cfbe422d4f391da45d13a",
         "version" : "1.0.0-rc.3"
+      }
+    },
+    {
+      "identity" : "soto",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/soto-project/soto",
+      "state" : {
+        "revision" : "f732b562bb5e0202470157a6041aa754229e777e",
+        "version" : "7.14.0"
+      }
+    },
+    {
+      "identity" : "soto-core",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/soto-project/soto-core",
+      "state" : {
+        "revision" : "47454bf79649691da406978ae803b51b54246d6e",
+        "version" : "7.14.0"
       }
     },
     {
@@ -322,7 +322,7 @@
       "location" : "https://github.com/tachyonics/swift-wire",
       "state" : {
         "branch" : "main",
-        "revision" : "12ee6e15969083b55c6c8803d416cb0f682e62a6"
+        "revision" : "4c161772b21d080c741011162a42cf166a653028"
       }
     },
     {
@@ -331,7 +331,7 @@
       "location" : "https://github.com/tachyonics/wire-hummingbird",
       "state" : {
         "branch" : "main",
-        "revision" : "ea9d2aa25290218496cd48cd71db72b200f70a52"
+        "revision" : "4527e4fe729eefe317f7703a33e52cf816f522c7"
       }
     },
     {
@@ -340,7 +340,7 @@
       "location" : "https://github.com/tachyonics/wire-open-api",
       "state" : {
         "branch" : "main",
-        "revision" : "e31296b7e0517a247d60bce8d1345a75db5c764e"
+        "revision" : "361c81198932136a985913c3e45f955b167375f5"
       }
     },
     {

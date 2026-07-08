@@ -9,7 +9,13 @@ let package = Package(
         .macOS(.v15)
     ],
     dependencies: [
-        .package(url: "https://github.com/swift-server-community/dynamo-db-tables", from: "1.0.0-rc.2"),
+        .package(
+            url: "https://github.com/swift-server-community/dynamo-db-tables",
+            from: "1.0.0-rc.2",
+            traits: ["SOTOSDK"]
+        ),
+        .package(url: "https://github.com/soto-project/soto", from: "7.0.0"),
+        .package(url: "https://github.com/soto-project/soto-core", from: "7.0.0"),
         .package(url: "https://github.com/apple/swift-openapi-generator", from: "1.6.0"),
         .package(url: "https://github.com/apple/swift-openapi-runtime", from: "1.7.0"),
         .package(url: "https://github.com/swift-server/swift-openapi-hummingbird", from: "2.0.1"),
@@ -60,6 +66,9 @@ let package = Package(
                 "TaskClusterApp",
                 "TaskClusterDynamoDBModel",
                 .product(name: "DynamoDBTables", package: "dynamo-db-tables"),
+                .product(name: "DynamoDBTablesSoto", package: "dynamo-db-tables"),
+                .product(name: "SotoCore", package: "soto-core"),
+                .product(name: "SotoDynamoDB", package: "soto"),
                 .product(name: "Configuration", package: "swift-configuration"),
                 .product(name: "Hummingbird", package: "hummingbird"),
                 .product(name: "Wire", package: "swift-wire"),

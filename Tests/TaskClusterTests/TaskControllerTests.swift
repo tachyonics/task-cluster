@@ -11,9 +11,10 @@ import WireOpenAPI
 @testable import TaskClusterModel
 
 /// A minimal graph for tests — wraps a mock-backed controller so `buildApplication`
-/// exercises the real `WireOpenAPI.apply` path. Conforms to `Introspectable` with an
-/// empty model (these tests exercise the HTTP layer, not introspection).
-private struct TestGraph: TransportComposable, Introspectable {
+/// exercises the real `WireOpenAPI.apply` path. Conforms to `Introspectable` with an empty
+/// model and `Teardownable` with the default (empty) teardown; these tests exercise the
+/// HTTP layer, not introspection or teardown.
+private struct TestGraph: TransportComposable, Introspectable, Teardownable {
     let handlers: [any TransportContributor]
     func introspect() -> WiringModel { WiringModel(bindings: []) }
 }
