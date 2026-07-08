@@ -10,15 +10,22 @@ jobs:
   BuildTestAndAnalyze:
     runs-on: ubuntu-latest
     container:
-      image: swift:6.3.1
+      image: swift:6.3.3
+    # No container runtime here — the LocalStack integration test lives in integration.yml
+    # so it doesn't gate the fast checks; without a runtime it skips gracefully.
     steps:
       - name: Install dependencies
         run: apt-get update && apt-get install -y curl unzip
       - uses: actions/checkout@v7
       - name: Build
         run: swift build -c release -Xswiftc -strict-concurrency=complete
+      - name: Build (verbose log for the unused-import analyzer)
+        # The analyzer needs the compiler invocations; -v is noisy (linker object lists),
+        # so it goes to build.log, not the console. Before `swift test` so it's the first
+        # debug compile and actually emits the invocations.
+        run: swift build -v > build.log 2>&1
       - name: Run tests
-        run: swift test -v 2>&1 | tee build.log
+        run: swift test
       - name: Install SwiftLint
         run: |
           curl -sL https://github.com/realm/SwiftLint/releases/download/0.63.2/swiftlint_linux_amd64.zip -o swiftlint.zip
@@ -35,7 +42,7 @@ jobs:
   SwiftFormat:
     runs-on: ubuntu-latest
     container:
-      image: swift:6.3.1
+      image: swift:6.3.3
     steps:
       - uses: actions/checkout@v7
       - name: Run swift-format
@@ -47,7 +54,7 @@ jobs:
   Coverage:
     runs-on: ubuntu-latest
     container:
-      image: swift:6.3.1
+      image: swift:6.3.3
     steps:
       - name: Install dependencies                                                                                                                                              
         run: apt-get update && apt-get install -y curl
@@ -83,7 +90,7 @@ jobs:
   APIBreakage:
     runs-on: ubuntu-latest
     container:
-      image: swift:6.3.1
+      image: swift:6.3.3
     steps:
       - uses: actions/checkout@v7
         with:

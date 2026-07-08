@@ -1,0 +1,27 @@
+name: Integration
+
+# The LocalStack integration test builds the app image (static-musl) and runs it against a
+# LocalStack DynamoDB, so it's slow and needs a container runtime + LOCALSTACK_AUTH_TOKEN.
+# Split from the main CI so it doesn't gate the fast checks. Post-1.0 this should become
+# main-only — drop the pull_request trigger.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  LocalStack:
+    runs-on: ubuntu-latest
+    container:
+      image: swift:6.3.3
+    env:
+      DOCKER_BUILDKIT: 1
+      COMPOSE_DOCKER_CLI_BUILD: 1
+      LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
+    steps:
+      - name: Install dependencies
+        run: apt-get update && apt-get install -y curl docker.io docker-buildx
+      - uses: actions/checkout@v7
+      - name: Run integration tests
+        run: swift test --filter TaskClusterLocalStackIntegrationTests

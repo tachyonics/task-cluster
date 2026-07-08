@@ -4,9 +4,20 @@ import HummingbirdTesting
 import Logging
 import Smockable
 import Testing
+import Wire
+import WireOpenAPI
 
 @testable import TaskClusterApp
 @testable import TaskClusterModel
+
+/// A minimal graph for tests — wraps a mock-backed controller so `buildApplication`
+/// exercises the real `WireOpenAPI.apply` path. Conforms to `Introspectable` with an empty
+/// model and `Teardownable` with the default (empty) teardown; these tests exercise the
+/// HTTP layer, not introspection or teardown.
+private struct TestGraph: TransportComposable, Introspectable, Teardownable {
+    let handlers: [any TransportContributor]
+    func introspect() -> WiringModel { WiringModel(bindings: []) }
+}
 
 @Suite("TaskController Tests")
 struct TaskControllerTests {
@@ -37,7 +48,7 @@ struct TaskControllerTests {
         let mock = MockTestTaskRepository(expectations: expectations)
 
         let app = try buildApplication(
-            repository: mock,
+            graph: TestGraph(handlers: [TaskController(repository: mock)]),
             configuration: .init(),
             logger: Logger(label: "test")
         )
@@ -66,7 +77,7 @@ struct TaskControllerTests {
         let mock = MockTestTaskRepository(expectations: expectations)
 
         let app = try buildApplication(
-            repository: mock,
+            graph: TestGraph(handlers: [TaskController(repository: mock)]),
             configuration: .init(),
             logger: Logger(label: "test")
         )
@@ -87,7 +98,7 @@ struct TaskControllerTests {
         let mock = MockTestTaskRepository(expectations: expectations)
 
         let app = try buildApplication(
-            repository: mock,
+            graph: TestGraph(handlers: [TaskController(repository: mock)]),
             configuration: .init(),
             logger: Logger(label: "test")
         )
@@ -121,7 +132,7 @@ struct TaskControllerTests {
         let mock = MockTestTaskRepository(expectations: expectations)
 
         let app = try buildApplication(
-            repository: mock,
+            graph: TestGraph(handlers: [TaskController(repository: mock)]),
             configuration: .init(),
             logger: Logger(label: "test")
         )
@@ -150,7 +161,7 @@ struct TaskControllerTests {
         let mock = MockTestTaskRepository(expectations: expectations)
 
         let app = try buildApplication(
-            repository: mock,
+            graph: TestGraph(handlers: [TaskController(repository: mock)]),
             configuration: .init(),
             logger: Logger(label: "test")
         )

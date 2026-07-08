@@ -1,10 +1,12 @@
 import Hummingbird
 import Logging
 import OpenAPIHummingbird  // swiftlint:disable:this unused_import
-import TaskClusterModel
+import Wire
+import WireHummingbird
+import WireOpenAPI
 
-package func buildApplication<Repository: TaskRepository>(
-    repository: Repository,
+package func buildApplication(
+    graph: some TransportComposable & Introspectable & Teardownable & Sendable,
     configuration: ApplicationConfiguration,
     logger: Logger
 ) throws -> some ApplicationProtocol {
@@ -18,8 +20,17 @@ package func buildApplication<Repository: TaskRepository>(
         HTTPResponse.Status.ok
     }
 
-    let controller = TaskController(repository: repository)
-    try controller.registerHandlers(on: router)
+    // WireHummingbird and WireOpenAPI coexist on one graph: the OpenAPI controllers
+    // register their handlers, and the graph's wiring model is served here.
+    try WireOpenAPI.apply(graph, to: router)
+    WireHummingbird.mountIntrospection(graph, on: router.group("wiring"))
 
-    return Application(router: router, configuration: configuration, logger: logger)
+    // Teardown (M4): the graph's `@Teardown` actions (the AWS client `shutdown()`) run at
+    // app-scope shutdown via a service that shuts down last — after the server stops.
+    return Application(
+        router: router,
+        configuration: configuration,
+        services: [WireHummingbird.teardownService(graph, logger: logger)],
+        logger: logger
+    )
 }

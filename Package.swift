@@ -9,13 +9,24 @@ let package = Package(
         .macOS(.v15)
     ],
     dependencies: [
-        .package(url: "https://github.com/swift-server-community/dynamo-db-tables", from: "1.0.0-rc.2"),
+        .package(
+            url: "https://github.com/swift-server-community/dynamo-db-tables",
+            from: "1.0.0-rc.2",
+            traits: ["SOTOSDK"]
+        ),
+        .package(url: "https://github.com/soto-project/soto", from: "7.0.0"),
+        .package(url: "https://github.com/soto-project/soto-core", from: "7.0.0"),
         .package(url: "https://github.com/apple/swift-openapi-generator", from: "1.6.0"),
         .package(url: "https://github.com/apple/swift-openapi-runtime", from: "1.7.0"),
         .package(url: "https://github.com/swift-server/swift-openapi-hummingbird", from: "2.0.1"),
         .package(url: "https://github.com/hummingbird-project/hummingbird", from: "2.0.0"),
         .package(url: "https://github.com/tachyonics/smockable", from: "1.0.0-rc.3"),
         .package(url: "https://github.com/apple/swift-configuration", from: "1.1.0"),
+        .package(url: "https://github.com/tachyonics/swift-wire", branch: "main"),
+        .package(url: "https://github.com/tachyonics/wire-open-api", branch: "main"),
+        .package(url: "https://github.com/tachyonics/wire-hummingbird", branch: "main"),
+        .package(url: "https://github.com/tachyonics/swift-local-containers", from: "0.9.2"),
+        .package(url: "https://github.com/swift-server/async-http-client", from: "1.24.0"),
     ],
     targets: [
         .target(
@@ -26,6 +37,7 @@ let package = Package(
             dependencies: [
                 "TaskClusterModel",
                 .product(name: "DynamoDBTables", package: "dynamo-db-tables"),
+                .product(name: "Wire", package: "swift-wire"),
             ]
         ),
         .target(
@@ -45,6 +57,9 @@ let package = Package(
                 .product(name: "Hummingbird", package: "hummingbird"),
                 .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
                 .product(name: "OpenAPIHummingbird", package: "swift-openapi-hummingbird"),
+                .product(name: "Wire", package: "swift-wire"),
+                .product(name: "WireOpenAPI", package: "wire-open-api"),
+                .product(name: "WireHummingbird", package: "wire-hummingbird"),
             ]
         ),
         .executableTarget(
@@ -53,9 +68,16 @@ let package = Package(
                 "TaskClusterApp",
                 "TaskClusterDynamoDBModel",
                 .product(name: "DynamoDBTables", package: "dynamo-db-tables"),
+                .product(name: "DynamoDBTablesSoto", package: "dynamo-db-tables"),
+                .product(name: "SotoCore", package: "soto-core"),
+                .product(name: "SotoDynamoDB", package: "soto"),
                 .product(name: "Configuration", package: "swift-configuration"),
                 .product(name: "Hummingbird", package: "hummingbird"),
-            ]
+                .product(name: "Wire", package: "swift-wire"),
+                .product(name: "WireOpenAPI", package: "wire-open-api"),
+                .product(name: "WireHummingbird", package: "wire-hummingbird"),
+            ],
+            plugins: [.plugin(name: "WireBuildPlugin", package: "swift-wire")]
         ),
         .testTarget(
             name: "TaskClusterTests",
@@ -65,6 +87,7 @@ let package = Package(
                 .product(name: "Smockable", package: "smockable"),
                 .product(name: "Hummingbird", package: "hummingbird"),
                 .product(name: "HummingbirdTesting", package: "hummingbird"),
+                .product(name: "WireOpenAPI", package: "wire-open-api"),
             ]
         ),
         .testTarget(
@@ -73,6 +96,23 @@ let package = Package(
                 "TaskClusterDynamoDBModel",
                 "TaskClusterModel",
                 .product(name: "DynamoDBTables", package: "dynamo-db-tables"),
+            ]
+        ),
+        // LocalStack integration: builds TaskCluster from the package-root Dockerfile,
+        // stands up a LocalStack DynamoDB (the table codegen'd from
+        // Resources/dynamodb-table.json), and round-trips a task through the running
+        // service against a real table — exercising the live AWS client (and its
+        // @Teardown shutdown when the container stops). Gated on a container runtime +
+        // LocalStack token, so it skips where those aren't available.
+        .testTarget(
+            name: "TaskClusterIntegrationTests",
+            dependencies: [
+                .product(name: "ContainerMacrosLib", package: "swift-local-containers"),
+                .product(name: "ContainerTestSupport", package: "swift-local-containers"),
+                .product(name: "AsyncHTTPClient", package: "async-http-client"),
+            ],
+            plugins: [
+                .plugin(name: "ContainerCodeGen", package: "swift-local-containers")
             ]
         ),
     ]

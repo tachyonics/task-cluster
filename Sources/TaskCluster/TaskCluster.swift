@@ -1,27 +1,25 @@
 import Configuration
-import DynamoDBTables
 import Hummingbird
-import Logging
 import TaskClusterApp
-import TaskClusterDynamoDBModel
 
 @main
 struct TaskCluster {
     static func main() async throws {
+        let graph = try await Wire.bootstrap()
         let config = ConfigReader(provider: EnvironmentVariablesProvider())
         let port = config.int(forKey: "HTTP_PORT", default: 8080)
 
-        let logger = Logger(label: "TaskCluster")
-        let table = InMemoryDynamoDBCompositePrimaryKeyTable()
-        let repository = DynamoDBTaskRepository(table: table)
         let configuration = ApplicationConfiguration(
             address: .hostname("0.0.0.0", port: port)
         )
 
+        // Controllers collate into the graph's `TransportComposable` surface; the
+        // adapter registers each onto the router's `ServerTransport`. The graph's
+        // wiring model is served via WireHummingbird's introspection endpoint.
         let application = try buildApplication(
-            repository: repository,
+            graph: graph,
             configuration: configuration,
-            logger: logger
+            logger: graph.logger
         )
         try await application.run()
     }

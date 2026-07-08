@@ -8,3 +8,6 @@ DerivedData/
 .netrc
 .swift-version
 .swiftpm/
+
+# Local container env — holds secrets.
+.local-containers/env
