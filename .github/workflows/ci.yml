@@ -10,15 +10,24 @@ jobs:
   BuildTestAndAnalyze:
     runs-on: ubuntu-latest
     container:
-      image: swift:6.3.1
+      # Swift 6.4 nightly: the package is tools-version 6.4 since the M6d port (WireMVC's core is
+      # proposal-native), which a released toolchain cannot parse.
+      image: swiftlang/swift:nightly-6.4.x-noble
+    # No container runtime here — the LocalStack integration test lives in integration.yml
+    # so it doesn't gate the fast checks; without a runtime it skips gracefully.
     steps:
       - name: Install dependencies
         run: apt-get update && apt-get install -y curl unzip
       - uses: actions/checkout@v7
       - name: Build
         run: swift build -c release -Xswiftc -strict-concurrency=complete
+      - name: Build (verbose log for the unused-import analyzer)
+        # The analyzer needs the compiler invocations; -v is noisy (linker object lists),
+        # so it goes to build.log, not the console. Before `swift test` so it's the first
+        # debug compile and actually emits the invocations.
+        run: swift build -v > build.log 2>&1
       - name: Run tests
-        run: swift test -v 2>&1 | tee build.log
+        run: swift test
       - name: Install SwiftLint
         run: |
           curl -sL https://github.com/realm/SwiftLint/releases/download/0.63.2/swiftlint_linux_amd64.zip -o swiftlint.zip
@@ -35,7 +44,9 @@ jobs:
   SwiftFormat:
     runs-on: ubuntu-latest
     container:
-      image: swift:6.3.1
+      # Swift 6.4 nightly: the package is tools-version 6.4 since the M6d port (WireMVC's core is
+      # proposal-native), which a released toolchain cannot parse.
+      image: swiftlang/swift:nightly-6.4.x-noble
     steps:
       - uses: actions/checkout@v7
       - name: Run swift-format
@@ -47,16 +58,25 @@ jobs:
   Coverage:
     runs-on: ubuntu-latest
     container:
-      image: swift:6.3.1
+      # Swift 6.4 nightly: the package is tools-version 6.4 since the M6d port (WireMVC's core is
+      # proposal-native), which a released toolchain cannot parse.
+      image: swiftlang/swift:nightly-6.4.x-noble
     steps:
       - name: Install dependencies                                                                                                                                              
         run: apt-get update && apt-get install -y curl
       - uses: actions/checkout@v7
       - name: Run tests with coverage
-        run: swift test --enable-code-coverage --xunit-output test-results.xml
+        # `--build-system native` because the steps below read the *old* build layout, and the 6.4
+        # default (`swiftbuild`) does not produce it: bin-path becomes `.build/out/Products/Debug-…`,
+        # the profile moves with it, and there is no merged `<package>PackageTests.xctest` at all —
+        # swiftbuild emits one bundle per test target. Rather than teach llvm-cov about several
+        # objects, this keeps the layout the script was written for. `native` is deprecated, so this
+        # is a dependency with an end date; when it goes, the export below needs rewriting to pass
+        # each per-target bundle as its own `-object`.
+        run: swift test --build-system native --enable-code-coverage --xunit-output test-results.xml
       - name: Convert to LCOV
         run: |
-          BIN=$(swift build --show-bin-path)
+          BIN=$(swift build --build-system native --show-bin-path)
           llvm-cov export \
             -format=lcov \
             -instr-profile=.build/debug/codecov/default.profdata \
@@ -83,7 +103,9 @@ jobs:
   APIBreakage:
     runs-on: ubuntu-latest
     container:
-      image: swift:6.3.1
+      # Swift 6.4 nightly: the package is tools-version 6.4 since the M6d port (WireMVC's core is
+      # proposal-native), which a released toolchain cannot parse.
+      image: swiftlang/swift:nightly-6.4.x-noble
     steps:
       - uses: actions/checkout@v7
         with:
@@ -91,4 +113,8 @@ jobs:
       - name: Check for API breaking changes
         run: |                                                                                                                                                                  
           git config --global --add safe.directory "$GITHUB_WORKSPACE"                                                                                                          
-          swift package diagnose-api-breaking-changes origin/main
+          # `--build-system native` for the same reason as the Coverage job: under the 6.4 default the
+          # baseline build fails to produce the OpenAPI generator executable its build-tool plugin needs
+          # ("Build input file cannot be found: …/swift-openapi-generator"), so the apidiff checkout
+          # cannot be built at all. Verified locally: native completes and reports no breakage.
+          swift package --build-system native diagnose-api-breaking-changes origin/main
