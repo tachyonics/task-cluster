@@ -69,8 +69,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/tachyonics/smockable",
       "state" : {
-        "revision" : "b4702a692745bd24ce3cfbe422d4f391da45d13a",
-        "version" : "1.0.0-rc.3"
+        "revision" : "b5a13ed774970fbd56f7c4be7e7b5f9741fc45af",
+        "version" : "1.0.0-rc.5"
       }
     },
     {
