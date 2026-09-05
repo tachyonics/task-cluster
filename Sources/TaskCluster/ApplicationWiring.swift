@@ -1,34 +1,33 @@
 import Configuration
 import DynamoDBTables
 import DynamoDBTablesSoto
-import Logging
 import SotoCore
 import SotoDynamoDB
 import Wire
 
-enum ApplicationWiring {
-    // Read off the graph at the composition root and handed to the (non-Wire-managed)
-    // Application; nothing in the graph @Injects it, so allowUnused silences the
-    // dead-binding warning.
-    @Provides(allowUnused: true)
-    static let logger = Logger(label: "TaskCluster")
+package enum ApplicationWiring {
+    // `ConfigReader` is no longer provided here — it is a graph *input* now, built by
+    // `AppBootstrap.prepare()` before any binding exists and handed to `Wire.bootstrap(inputs:)`. The
+    // bindings below still `@Inject` it exactly as they did; only where the value comes from changed.
+    //
+    // The logger binding is gone with it. It existed to be read back off the graph and handed to the
+    // Hummingbird `Application`, which no longer exists; `LoggingSystem.bootstrap` runs in the pre-step,
+    // so a binding that wants a logger mints its own against the installed handler.
 
-    // Configuration source for the resource chain below. Env-backed: `TASK_TABLE_NAME`,
-    // `AWS_REGION`, `AWS_ENDPOINT_URL` (the last pointing at LocalStack in tests).
-    @Provides
-    static let config = ConfigReader(provider: EnvironmentVariablesProvider())
-
-    // The AWS client — a process-lifetime resource with no run loop. `@Teardown` (M4) is
-    // what makes it a real resource: Wire calls `shutdown()` at app-scope teardown, in
-    // reverse dependency order, once the server has stopped. Soto rather than
-    // aws-sdk-swift because the latter has compile issues against the static-musl SDK the
-    // production image builds with.
+    // The AWS client — a process-lifetime resource with no run loop. Soto rather than aws-sdk-swift
+    // because the latter has compile issues against the static-musl SDK the production image builds with.
+    //
+    // **`@Teardown` does not currently run under the generated entry point.** `WireMVC.serve` never
+    // receives the graph, and nothing makes `server.serve` return, so there is no shutdown trigger to
+    // reach the walk from — wire-mvc#177, which tracks both halves. The annotation is correct and stays:
+    // it is what the graph reads to order the walk, and it is what will fire once that lands. What it
+    // means today is that SIGTERM ends the process without draining this client.
     @Provides
     @Teardown({ (client: AWSClient) in try await client.shutdown() })
-    static func awsClient() -> AWSClient { AWSClient() }
+    package static func awsClient() -> AWSClient { AWSClient() }
 
     @Provides
-    static func dynamoDB(client: AWSClient, config: ConfigReader) -> SotoDynamoDB.DynamoDB {
+    package static func dynamoDB(client: AWSClient, config: ConfigReader) -> SotoDynamoDB.DynamoDB {
         SotoDynamoDB.DynamoDB(
             client: client,
             region: Region(rawValue: config.string(forKey: "AWS_REGION", default: "us-east-1")),
@@ -42,7 +41,7 @@ enum ApplicationWiring {
     // TaskRepository>`) without spelling the nested concrete stack. The `& Sendable`
     // matches the repository's `Table` constraint.
     @Provides
-    static func table(
+    package static func table(
         dynamoDB: SotoDynamoDB.DynamoDB,
         config: ConfigReader
     ) -> some DynamoDBCompositePrimaryKeyTable & Sendable {

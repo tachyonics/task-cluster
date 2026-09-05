@@ -1,39 +1,32 @@
 import Foundation
-import Hummingbird
-import HummingbirdTesting
-import Logging
-import ServiceLifecycle
 import Smockable
 import Testing
-import Wire
-import WireMVC
-import WireOpenAPI
+import WireMVCTesting
 
 @testable import TaskClusterApp
 @testable import TaskClusterModel
 
-/// A minimal graph for tests — wraps a mock-backed controller so `buildApplication` exercises the real
-/// registration path. Conforms to `Introspectable` with an empty model and `Teardownable` with the
-/// default (empty) teardown; these tests exercise the HTTP layer, not introspection or teardown.
-///
-/// What a graph supplies changed with the M6d port. It used to be `[any TransportContributor]` — the
-/// controller itself, whose witness delegated `registerHandlers`. Operations are WireMVC routes now, so
-/// it is `[any RouteContributor]`: the generated proxy, holding the controller. The proxy is synthesised
-/// per target, which is why this test module applies the same plugins the executable does.
-private struct TestGraph: WireMVCComposable, Introspectable, Teardownable {
-    let routeContributors: [any RouteContributor]
-    var services: [any Service] { [] }
-    func introspect() -> WiringModel { WiringModel(bindings: []) }
-}
-
-/// The controller, wrapped in the proxy a graph hands to `apply`.
-private func contributor(
-    _ repository: some TaskRepository
-) -> some RouteContributor {
-    _WireOpenAPIContributor_TaskAPI(TaskController(repository: repository))
-}
-
-@Suite("TaskController Tests")
+// The controller suite, served by the app itself.
+//
+// `@Suite(.wiremvc(.inProcess))` stands up the **real** application: `AppBootstrap.prepare()`, the real
+// graph, the real `createRouteBuilder`, the collated route contributors, the global middleware wrap and the
+// `@NotFound` fallback — the same build the generated `@main` runs, with the transport swapped. `.inProcess`
+// means no socket and no port: the finalized handler is called directly, which covers everything that does
+// not depend on the wire.
+//
+// This replaced a hand-built `TestGraph` that conformed to `WireMVCComposable` around a single contributor.
+// That graph could only ever exercise registration; it had no error tiers, no fallback and no composition
+// root, so a bug in any of them was invisible here. The trade is that per-test mocks now go through the
+// `@Replaces` forwarder in `MockTaskRepository.swift` rather than being constructor-injected per test.
+//
+// **`.serialized` is load-bearing** — see `withRepository(_:)`.
+//
+// The keyed `@BindType` harness would remove the need for both the forwarder and `.serialized`, and it is
+// what a `@Controller`-based app would use. It does not apply here: swift-wire generates the variant graph
+// and doubles struct for this key perfectly well, but wire-mvc emits the keyed suite factory and
+// `withClient(supplying:)` only for subjects its `ControllerFinder` matched — `@Controller` declarations —
+// and `TaskController` is an `@OpenAPIController`, which wire-open-api contributes with no variant witness.
+@Suite("TaskController Tests", .wiremvc(.inProcess), .serialized)
 struct TaskControllerTests {
     private static let fixedDate = Date(timeIntervalSince1970: 1_000_000)
 
@@ -61,25 +54,10 @@ struct TaskControllerTests {
         when(expectations.create(task: .any), return: task)
         let mock = MockTestTaskRepository(expectations: expectations)
 
-        let app = try buildApplication(
-            graph: TestGraph(routeContributors: [contributor(mock)]),
-            configuration: .init(),
-            logger: Logger(label: "test")
-        )
-
-        try await app.test(.router) { client in
-            let body = ByteBuffer(
-                string: """
-                    {"title":"Test Task","priority":1}
-                    """
-            )
-            try await client.execute(
-                uri: "/task",
-                method: .post,
-                headers: [.contentType: "application/json"],
-                body: body
-            ) { response in
-                #expect(response.status == .created)
+        try await withRepository(mock) {
+            try await withClient { client in
+                let response = try await client.post("/task", json: CreateTaskBody(title: "Test Task", priority: 1))
+                #expect(response.status == 201)
             }
         }
     }
@@ -90,18 +68,10 @@ struct TaskControllerTests {
         when(expectations.get(taskId: .any), return: nil)
         let mock = MockTestTaskRepository(expectations: expectations)
 
-        let app = try buildApplication(
-            graph: TestGraph(routeContributors: [contributor(mock)]),
-            configuration: .init(),
-            logger: Logger(label: "test")
-        )
-
-        try await app.test(.router) { client in
-            try await client.execute(
-                uri: "/task/\(UUID())",
-                method: .get
-            ) { response in
-                #expect(response.status == .notFound)
+        try await withRepository(mock) {
+            try await withClient { client in
+                let response = try await client.get("/task/\(UUID())")
+                #expect(response.status == 404)
             }
         }
     }
@@ -111,25 +81,10 @@ struct TaskControllerTests {
         let expectations = MockTestTaskRepository.Expectations()
         let mock = MockTestTaskRepository(expectations: expectations)
 
-        let app = try buildApplication(
-            graph: TestGraph(routeContributors: [contributor(mock)]),
-            configuration: .init(),
-            logger: Logger(label: "test")
-        )
-
-        try await app.test(.router) { client in
-            let body = ByteBuffer(
-                string: """
-                    {"priority":99}
-                    """
-            )
-            try await client.execute(
-                uri: "/task/\(UUID())/priority",
-                method: .patch,
-                headers: [.contentType: "application/json"],
-                body: body
-            ) { response in
-                #expect(response.status == .badRequest)
+        try await withRepository(mock) {
+            try await withClient { client in
+                let response = try await client.patch("/task/\(UUID())/priority", json: PriorityBody(priority: 99))
+                #expect(response.status == 400)
             }
         }
 
@@ -145,18 +100,10 @@ struct TaskControllerTests {
         when(expectations.get(taskId: .any), return: task)
         let mock = MockTestTaskRepository(expectations: expectations)
 
-        let app = try buildApplication(
-            graph: TestGraph(routeContributors: [contributor(mock)]),
-            configuration: .init(),
-            logger: Logger(label: "test")
-        )
-
-        try await app.test(.router) { client in
-            try await client.execute(
-                uri: "/task/\(task.taskId)/cancel",
-                method: .post
-            ) { response in
-                #expect(response.status == .conflict)
+        try await withRepository(mock) {
+            try await withClient { client in
+                let response = try await client.send("POST", "/task/\(task.taskId)/cancel")
+                #expect(response.status == 409)
             }
         }
 
@@ -174,30 +121,49 @@ struct TaskControllerTests {
         when(expectations.update(task: .any), return: cancelledTask)
         let mock = MockTestTaskRepository(expectations: expectations)
 
-        let app = try buildApplication(
-            graph: TestGraph(routeContributors: [contributor(mock)]),
-            configuration: .init(),
-            logger: Logger(label: "test")
-        )
-
-        try await app.test(.router) { client in
-            try await client.execute(
-                uri: "/task/\(task.taskId)/cancel",
-                method: .post,
-                headers: [.accept: "application/json"]
-            ) { response in
-                #expect(response.status == .ok)
-
-                let responseBody = try JSONDecoder().decode(
-                    TaskResponseBody.self,
-                    from: Data(response.body.readableBytesView)
+        try await withRepository(mock) {
+            try await withClient { client in
+                let response = try await client.send(
+                    "POST",
+                    "/task/\(task.taskId)/cancel",
+                    headers: ["Accept": "application/json"]
                 )
-                #expect(responseBody.status == "cancelled")
+                #expect(response.status == 200)
+                #expect(try response.json(TaskResponseBody.self).status == "cancelled")
             }
         }
 
         verify(mock).update(task: .matching { $0.status == .cancelled })
     }
+
+    /// The health route — an annotation-driven `@Get` beside four document-driven operations, on the one
+    /// router. It has a generated typed client because it *is* a `@Controller`, which is the same
+    /// distinction that keeps `TaskController` off the keyed harness.
+    @Test("The health route serves 200")
+    func healthIsServed() async throws {
+        try await withClient(for: HealthControllerClient.self) { health in
+            try await health.health()
+        }
+    }
+
+    /// The `@NotFound` fallback the composition root declares. Unreachable from the old hand-built graph —
+    /// there was no fallback in it to reach.
+    @Test("An unmatched path reaches the composition root's @NotFound handler")
+    func unmatchedPathReachesFallback() async throws {
+        try await withClient { client in
+            let response = try await client.get("/no-such-route")
+            #expect(response.status == 404)
+        }
+    }
+}
+
+private struct CreateTaskBody: Encodable {
+    var title: String
+    var priority: Int
+}
+
+private struct PriorityBody: Encodable {
+    var priority: Int
 }
 
 private struct TaskResponseBody: Decodable {

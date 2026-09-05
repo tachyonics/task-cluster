@@ -1,5 +1,5 @@
 {
-  "originHash" : "39e11bc97c48307856d20b322d5a5977e46424ed8945ebe355187a2035554a19",
+  "originHash" : "91f690f4a6f6e2557d9c8216b5c1fa900cc39ebaf6189abb523dcdf94d563d3b",
   "pins" : [
     {
       "identity" : "async-http-client",
@@ -53,15 +53,6 @@
       "state" : {
         "revision" : "176c5a434fd76f6f479848d1a8f7d44967534168",
         "version" : "2.4.1"
-      }
-    },
-    {
-      "identity" : "hummingbird",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/hummingbird-project/hummingbird",
-      "state" : {
-        "revision" : "eebb5ecf8a39beea87401f014fdf87f0ce5b159d",
-        "version" : "2.25.0"
       }
     },
     {
@@ -159,8 +150,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-certificates.git",
       "state" : {
-        "revision" : "bde8ca32a096825dfce37467137c903418c1893d",
-        "version" : "1.19.1"
+        "revision" : "c8aece90ea05f9866bd392a5bf13b5cae56c0e03",
+        "version" : "1.20.0"
       }
     },
     {
@@ -206,6 +197,15 @@
       "state" : {
         "revision" : "638af2b908d8109857389689d361e1f45f6617ea",
         "version" : "0.2.0"
+      }
+    },
+    {
+      "identity" : "swift-http-server",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/swift-server/swift-http-server.git",
+      "state" : {
+        "branch" : "main",
+        "revision" : "c9ec9f1df46ee5dcbbf0b6a23a0fd8a556b0647c"
       }
     },
     {
@@ -258,8 +258,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-nio.git",
       "state" : {
-        "revision" : "57c0a08a331aaea9f5d7a932ad94ef43be942a95",
-        "version" : "2.100.0"
+        "revision" : "a931f2c1de8dd49381ce3bf2e279d033f68d8865",
+        "version" : "2.102.0"
       }
     },
     {
@@ -313,15 +313,6 @@
       "location" : "https://github.com/tachyonics/swift-openapi-generator.git",
       "state" : {
         "revision" : "9e655e0adb9b993ef4cb29a6aa0dfc59b9b42b09"
-      }
-    },
-    {
-      "identity" : "swift-openapi-hummingbird",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/swift-server/swift-openapi-hummingbird",
-      "state" : {
-        "revision" : "026b50b17e9afe74d4d82c883d9c37154a8b30bf",
-        "version" : "2.0.1"
       }
     },
     {
@@ -381,28 +372,28 @@
     {
       "identity" : "swift-wire",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/tachyonics/swift-wire",
+      "location" : "https://github.com/swift-wire/swift-wire.git",
       "state" : {
         "branch" : "main",
-        "revision" : "049b23ead49a976784eda42e687fd4304a2b9004"
+        "revision" : "9394f6ebc102112200b67af6eff719d97659bb00"
       }
     },
     {
       "identity" : "wire-mvc",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/tachyonics/wire-mvc",
+      "location" : "https://github.com/swift-wire/wire-mvc.git",
       "state" : {
         "branch" : "main",
-        "revision" : "33f99d3b1990d44381756f955844991602aee585"
+        "revision" : "327fdf6079258715931bc5e91078a06606b19df2"
       }
     },
     {
       "identity" : "wire-open-api",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/tachyonics/wire-open-api",
+      "location" : "https://github.com/swift-wire/wire-open-api.git",
       "state" : {
         "branch" : "main",
-        "revision" : "907136ad387380669a9d3ffffa16fe15249b4d0c"
+        "revision" : "b2ae72f4e2a39a18b3b1aa037c6d229e422c6813"
       }
     },
     {
