@@ -62,6 +62,25 @@ struct TaskControllerTests {
         }
     }
 
+    /// The other side of the same document constraint. Before the range moved into the spec, `createTask`
+    /// checked it itself and this case had no test; now it is the *same* generated validator that
+    /// `updateTaskPriority` below exercises, reached through a different operation — so what is worth
+    /// asserting is that the two agree, and that neither reaches the repository to find out.
+    @Test("Creating a task with out-of-range priority returns 400 without touching the repository")
+    func createTaskBadRequest() async throws {
+        let expectations = MockTestTaskRepository.Expectations()
+        let mock = MockTestTaskRepository(expectations: expectations)
+
+        try await withRepository(mock) {
+            try await withClient { client in
+                let response = try await client.post("/task", json: CreateTaskBody(title: "Test Task", priority: 0))
+                #expect(response.status == 400)
+            }
+        }
+
+        verify(mock, .never).create(task: .any)
+    }
+
     @Test("Getting a non-existent task returns 404")
     func getTaskNotFound() async throws {
         var expectations = MockTestTaskRepository.Expectations()

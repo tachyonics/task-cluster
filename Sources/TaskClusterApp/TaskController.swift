@@ -4,7 +4,18 @@ import OpenAPIRuntime  // swiftlint:disable:this unused_import
 import TaskAPI
 import TaskClusterModel
 import Wire
+import WireMVC
 import WireOpenAPI
+
+/// The refusals, as ordinary error types. Nothing about them knows which status they become — that lives
+/// on the operation, in `@ErrorResponse`, which is what lets the same `NoSuchTask` answer 404 here and
+/// something else on a controller that documents a different set of responses.
+///
+/// They exist because a typed operation returns the *success* body and nothing else. Where a
+/// `@RawOperation` picked its response by constructing `.notFound(.init())`, the typed form has one
+/// return type, so every other documented answer is reached by throwing.
+package struct NoSuchTask: Error {}
+package struct TaskNotCancellable: Error {}
 
 @Singleton
 // `spec:` names the module owning the generated `APIProtocol`. The bare form means the document beside
@@ -15,6 +26,12 @@ import WireOpenAPI
 // `registerHandlers`, and the conformance is generated onto the plugin-emitted proxy — a hand-written one
 // here would require *every* operation in the document, which is the constraint that made splitting a
 // spec across controllers impossible before M6d.
+//
+// Every operation is `@Operation` — the typed form. The parameters arrive as ordinary Swift arguments
+// bound by WireMVC's own `@Path` and `@JSONBody`, the same wrappers `HealthController`'s `@Get` would
+// use, and the return value is wrapped in the operation's response. `Operations.createTask.Input` and
+// its `Output` are gone from this file entirely; what is left is the part that was ever this service's
+// to write.
 package struct TaskController<Repository: TaskRepository> {
     private let repository: Repository
 
@@ -23,17 +40,20 @@ package struct TaskController<Repository: TaskRepository> {
         self.repository = repository
     }
 
-    @RawOperation
-    package func createTask(_ input: Operations.createTask.Input) async throws -> Operations.createTask.Output {
-        let body =
-            switch input.body {
-            case .json(let value): value
-            }
-
-        guard (1...10).contains(body.priority) else {
-            return .badRequest(.init())
-        }
-
+    /// The document declares one success — 201 — so which response the shim builds needs no saying; a
+    /// second documented 2xx is what would force `@JSONResponse(status:)`.
+    ///
+    /// **No priority check in the body.** `1...10` is a fact about the API, not about this handler, so it
+    /// is written where the API is described: `minimum`/`maximum` on `CreateTaskRequest.priority`. The
+    /// generated validator reads the input before the forwarder calls this method, and a violation
+    /// arrives here as a `WireOpenAPIRequestValidationError` — which is why the 400 is a mapping rather
+    /// than a `guard`. The check also stops being something a client has to discover by being refused:
+    /// it is in the document they generate from.
+    @Operation
+    @ErrorResponse(WireOpenAPIRequestValidationError.self, .badRequest)
+    package func createTask(
+        @JSONBody body: Components.Schemas.CreateTaskRequest
+    ) async throws -> Components.Schemas.TaskItem {
         let task = TaskItem(
             title: body.title,
             description: body.description,
@@ -41,68 +61,62 @@ package struct TaskController<Repository: TaskRepository> {
             dueBy: body.dueBy
         )
 
-        let created = try await repository.create(task: task)
-        return .created(.init(body: .json(created.toResponse())))
+        return try await repository.create(task: task).toResponse()
     }
 
-    @RawOperation
-    package func getTask(_ input: Operations.getTask.Input) async throws -> Operations.getTask.Output {
-        guard let taskId = UUID(uuidString: input.path.taskId) else {
-            return .notFound(.init())
+    /// `taskId` is a `String` because the document says so — `format: uuid` is a hint the generator does
+    /// not turn into a `UUID`, and the typed form binds the type the document describes rather than one
+    /// the handler would prefer. So the parse stays, and a value that is not a UUID is the same answer as
+    /// a UUID naming nothing: the document declares no 400 on this path, and a caller cannot tell the two
+    /// apart anyway.
+    @Operation
+    @ErrorResponse(NoSuchTask.self, .notFound)
+    package func getTask(@Path taskId: String) async throws -> Components.Schemas.TaskItem {
+        guard let taskId = UUID(uuidString: taskId), let task = try await repository.get(taskId: taskId) else {
+            throw NoSuchTask()
         }
 
-        guard let task = try await repository.get(taskId: taskId) else {
-            return .notFound(.init())
-        }
-
-        return .ok(.init(body: .json(task.toResponse())))
+        return task.toResponse()
     }
 
-    @RawOperation
+    /// Both of this operation's failure responses, and they reach the handler from opposite directions:
+    /// the 400 is thrown *at* it by the generated validator before it runs, the 404 by it. One
+    /// `@ErrorResponse` list covers both because neither is special — a mapping matches on the error's
+    /// type, wherever inside the forwarder it was raised.
+    @Operation
+    @ErrorResponse(WireOpenAPIRequestValidationError.self, .badRequest)
+    @ErrorResponse(NoSuchTask.self, .notFound)
     package func updateTaskPriority(
-        _ input: Operations.updateTaskPriority.Input
-    ) async throws -> Operations.updateTaskPriority.Output {
-        let body =
-            switch input.body {
-            case .json(let value): value
-            }
-
-        guard (1...10).contains(body.priority) else {
-            return .badRequest(.init())
-        }
-
-        guard let taskId = UUID(uuidString: input.path.taskId) else {
-            return .notFound(.init())
-        }
-
-        guard var task = try await repository.get(taskId: taskId) else {
-            return .notFound(.init())
+        @Path taskId: String,
+        @JSONBody body: Components.Schemas.UpdateTaskPriorityRequest
+    ) async throws -> Components.Schemas.TaskItem {
+        guard let taskId = UUID(uuidString: taskId), var task = try await repository.get(taskId: taskId) else {
+            throw NoSuchTask()
         }
 
         task.priority = body.priority
         task.updatedAt = Date()
-        let updated = try await repository.update(task: task)
-        return .ok(.init(body: .json(updated.toResponse())))
+        return try await repository.update(task: task).toResponse()
     }
 
-    @RawOperation
-    package func cancelTask(_ input: Operations.cancelTask.Input) async throws -> Operations.cancelTask.Output {
-        guard let taskId = UUID(uuidString: input.path.taskId) else {
-            return .notFound(.init())
-        }
-
-        guard var task = try await repository.get(taskId: taskId) else {
-            return .notFound(.init())
+    /// The one refusal the document describes that no schema could: whether a task may be cancelled is a
+    /// fact about its current status, which is state rather than shape. It stays a `guard` in the handler
+    /// for exactly that reason — the spec is where the checks that do not need the database go.
+    @Operation
+    @ErrorResponse(NoSuchTask.self, .notFound)
+    @ErrorResponse(TaskNotCancellable.self, .conflict)
+    package func cancelTask(@Path taskId: String) async throws -> Components.Schemas.TaskItem {
+        guard let taskId = UUID(uuidString: taskId), var task = try await repository.get(taskId: taskId) else {
+            throw NoSuchTask()
         }
 
         guard task.status == .pending || task.status == .running else {
-            return .conflict(.init())
+            throw TaskNotCancellable()
         }
 
         task.status = .cancelled
         task.updatedAt = Date()
-        let updated = try await repository.update(task: task)
-        return .ok(.init(body: .json(updated.toResponse())))
+        return try await repository.update(task: task).toResponse()
     }
 }
 
