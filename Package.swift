@@ -43,7 +43,7 @@ let package = Package(
     dependencies: [
         .package(
             url: "https://github.com/swift-server-community/dynamo-db-tables",
-            from: "1.0.0-rc.3",
+            from: "1.0.0-rc.4",
             traits: ["SOTOSDK"]
         ),
         .package(url: "https://github.com/soto-project/soto", from: "7.0.0"),
