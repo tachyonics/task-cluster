@@ -1,6 +1,12 @@
 disabled_rules:
   - trailing_whitespace
   - void_return
+  # swift-format and SwiftLint disagree about the brace after a multi-line `where` clause, and the
+  # composition root has to write one: `createRouteBuilder(for:)` carries four `~Copyable` constraints
+  # that cannot fit on the declaration line. swift-format (a CI gate that rewrites the file) puts the
+  # brace on its own line; `opening_brace` wants it on the previous one. wire-mvc disables the rule for
+  # the same reason, this package's signatures being copies of its.
+  - opening_brace
 excluded:
   - .build
   - Package.swift
